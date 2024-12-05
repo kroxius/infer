@@ -11,12 +11,21 @@ module T = Textual
 open TextualTestHelpers
 
 let module_to_sil_exn module_ =
-  let module_, decls = TextualTransform.run Hack module_ in
-  match TextualSil.module_to_sil Hack module_ decls with
-  | Ok (cfg, tenv) ->
+  match TextualSil.module_to_sil module_ with
+  | Ok (cfg, tenv, _) ->
       (cfg, tenv)
   | Error err ->
       raise (Textual.TextualTransformError err)
+
+
+let%expect_test _ =
+  let no_lang = {|define nothing() : void { #node: ret null }|} in
+  let m = parse_module no_lang in
+  try module_to_sil_exn m |> ignore
+  with T.TextualTransformError errs ->
+    List.iter errs ~f:(Textual.pp_transform_error sourcefile F.std_formatter) ;
+    [%expect
+      {| dummy.sil, <unknown location>: transformation error: Missing or unsupported source_language attribute |}]
 
 
 let%expect_test "undefined types are included in tenv" =
@@ -49,7 +58,7 @@ let%expect_test "undefined types are included in tenv" =
          supers: {}
          objc_protocols: {}
          methods: {
-                     Foo.f#?
+                     Foo.f
                      Foo.f#2
                    }
          exported_obj_methods: {}
@@ -57,7 +66,6 @@ let%expect_test "undefined types are included in tenv" =
          class_info: {HackClassInfo (Class)}
          dummy: false
          source_file: dummy.sil
-
          hack Quux
          fields: {}
          statics: {}
@@ -68,7 +76,6 @@ let%expect_test "undefined types are included in tenv" =
          annots: {<>}
          class_info: {NoInfo}
          dummy: true
-
          hack Baz
          fields: {}
          statics: {}
@@ -79,7 +86,6 @@ let%expect_test "undefined types are included in tenv" =
          annots: {<>}
          class_info: {NoInfo}
          dummy: true
-
          hack Bar
          fields: {}
          statics: {}
@@ -116,7 +122,6 @@ let%expect_test "final annotation" =
       class_info: {HackClassInfo (Class)}
       dummy: false
       source_file: dummy.sil
-
       hack Bar
       fields: {}
       statics: {}
@@ -154,7 +159,6 @@ let%expect_test "abstract class" =
       class_info: {HackClassInfo (AbstractClass)}
       dummy: false
       source_file: dummy.sil
-
       hack Bar
       fields: {}
       statics: {}
@@ -261,7 +265,6 @@ let%expect_test "overloads in tenv" =
     annots: {<>}
     class_info: {NoInfo}
     dummy: true
-
     hack bool
     fields: {}
     statics: {}
@@ -400,7 +403,6 @@ let%expect_test "trait vs class kind" =
       class_info: {HackClassInfo (Class)}
       dummy: false
       source_file: dummy.sil
-
       hack T
       fields: {}
       statics: {}
@@ -439,7 +441,6 @@ let%expect_test "const" =
     annots: {<>}
     class_info: {NoInfo}
     dummy: true
-
     hack Uninit::A$static
     fields: {
                HackMixed* const  FIELD <>

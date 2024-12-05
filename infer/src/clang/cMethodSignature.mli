@@ -35,7 +35,6 @@ type t =
   ; is_cpp_copy_assignment: bool
   ; is_cpp_copy_ctor: bool
   ; is_cpp_move_ctor: bool
-  ; is_static_ctor: bool
   ; is_cpp_deleted: bool
   ; is_cpp_implicit: bool
   ; block_as_arg_attributes: ProcAttributes.block_as_arg_attributes option
@@ -66,7 +65,6 @@ val mk :
   -> ?is_cpp_copy_assignment:bool
   -> ?is_cpp_copy_ctor:bool
   -> ?is_cpp_move_ctor:bool
-  -> ?is_static_ctor:bool
   -> ?is_cpp_deleted:bool
   -> ?is_cpp_implicit:bool
   -> ?block_as_arg_attributes:ProcAttributes.block_as_arg_attributes option

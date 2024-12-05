@@ -6,7 +6,6 @@
  *)
 
 open! IStd
-module F = Format
 
 module Span : sig
   type block = {first: int; last: int} [@@deriving compare, equal]
@@ -14,13 +13,8 @@ module Span : sig
   type t = Every | Blocks of block list [@@deriving compare, equal]
 end
 
-type t = Span.t IString.Map.t
+type t = Span.t String.Map.t
 
-type error = UserError of (unit -> string)
-
-val parse_lines : ?file:string -> string list -> t * error list
+val parse_lines : ?file:string -> string list -> t
 
 val is_suppressed : suppressions:t -> issue_type:string -> line:int -> bool
-
-val pp_parse_result : F.formatter -> t * error list -> unit [@@warning "-unused-value-declaration"]
-(* used in unit tests *)

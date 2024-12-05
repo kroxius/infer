@@ -54,10 +54,6 @@ let string_of_scheduler scheduler =
   List.Assoc.find_exn (List.Assoc.inverse scheduler_symbols) ~equal:equal_scheduler scheduler
 
 
-type python_globals = OwnByClosures | OwnByModule [@@deriving equal]
-
-let python_globals_symbols = [("own-by-closures", OwnByClosures); ("own-by-module", OwnByModule)]
-
 type pulse_taint_config =
   { sources: Pulse_config_t.matchers
   ; sanitizers: Pulse_config_t.matchers
@@ -65,14 +61,6 @@ type pulse_taint_config =
   ; sinks: Pulse_config_t.matchers
   ; policies: Pulse_config_t.taint_policies
   ; data_flow_kinds: string list }
-
-type pulse_hack_builder_pattern =
-  { class_name: string [@yojson.key "class"]
-  ; finalizers: string list
-  ; immediately_non_discardable_class: string option [@yojson.option] }
-[@@deriving of_yojson]
-
-type pulse_hack_builder_patterns = pulse_hack_builder_pattern list [@@deriving of_yojson]
 
 (* List of ([build system], [executable name]). Several executables may map to the same build
    system. In that case, the first one in the list will be used for printing, eg, in which mode
@@ -113,7 +101,7 @@ let string_of_build_system build_system =
 
 let build_system_of_exe_name name =
   try List.Assoc.find_exn ~equal:String.equal (List.Assoc.inverse build_system_exe_assoc) name
-  with Not_found_s _ | Stdlib.Not_found ->
+  with Not_found_s _ | Caml.Not_found ->
     L.(die UserError)
       "Unsupported build command '%s'.@\n\
        If this is an alias for another build system that infer supports, you can use@\n\
@@ -1305,9 +1293,9 @@ and compaction_if_heap_greater_equal_to_GB =
 
 
 and compaction_minimum_interval_s =
-  CLOpt.mk_int ~long:"compaction-minimum-interval-s" ~default:0 ~meta:"int"
+  CLOpt.mk_int ~long:"compaction-minimum-interval-s" ~default:15 ~meta:"int"
     "An analysis worker will only trigger compaction if this amount of time (in seconds) has \
-     elapsed since last compaction. Defaults to 0"
+     elapsed since last compaction. Defaults to 15"
 
 
 and compilation_database =
@@ -1330,11 +1318,6 @@ and complete_capture_from =
      database specified with $(b, --results-dir)) (which must exist) will be completed from the \
      input database and according to the $(b, missing-*) files in the results directory.  The exit \
      code will be equal to the number of rows added to the capture database."
-
-
-and compute_captured_context =
-  CLOpt.mk_bool ~long:"compute-captured-context" ~default:true
-    "Compute context information for captured variables in Objective-C blocks"
 
 
 and config_impact_config_field_patterns =
@@ -2614,12 +2597,6 @@ and pulse_model_skip_pattern_list =
     "Regex of methods that should be modelled as \"skip\" in Pulse"
 
 
-and pulse_model_unknown_pure =
-  CLOpt.mk_string_list ~long:"pulse-model-unknown-pure"
-    ~in_help:InferCommand.[(Analyze, manual_pulse)]
-    "Regex of methods that should be modelled as unknown pure in Pulse"
-
-
 and pulse_model_unreachable =
   CLOpt.mk_string_list ~long:"pulse-model-unreachable"
     ~in_help:InferCommand.[(Analyze, manual_clang)]
@@ -2713,13 +2690,6 @@ and pulse_nullsafe_report_npe_as_separate_issue_type =
     ~in_help:InferCommand.[(Analyze, manual_pulse)]
     "Report null dereference issues on files marked @Nullsafe as a separate \
      NULLPTR_DEREFERENCE_IN_NULLSAFE_CLASS issue type."
-
-
-and pulse_over_approximate_reasoning =
-  CLOpt.mk_bool ~long:"pulse-over-approximate-reasoning"
-    ~in_help:InferCommand.[(Analyze, manual_pulse)]
-    "[EXPERIMENTAL] add over-approximate reasoning on top of the under-approximate, disjunctive \
-     reasoning of Pulse."
 
 
 and pulse_prevent_non_disj_top =
@@ -2995,16 +2965,6 @@ and python_files_index =
 
 and python_skip_db =
   CLOpt.mk_bool ~long:"python-skip-db" ~default:false "Skip the DB writing during Python capture"
-
-
-and python_globals =
-  CLOpt.mk_symbol ~long:"python-globals" ~default:OwnByModule ~eq:equal_python_globals
-    ~in_help:InferCommand.[(Analyze, manual_pulse)]
-    ~symbols:python_globals_symbols
-    "Specify the strategy to wire globals dictionnaire into each function\n\
-    \     - own-by-closures: each closure captured the global dictionary\n\
-     - own-by-module: each function is given the global dictionary as argument (not referenced in \
-     the heap to avoid aliases)"
 
 
 and qualified_cpp_name_block_list =
@@ -3762,7 +3722,7 @@ let post_parsing_initialization command_opt =
         match inferconfig_file with
         | Some inferconfig ->
             Printf.sprintf "version %s/inferconfig %s" Version.commit
-              (Stdlib.Digest.to_hex (Stdlib.Digest.file inferconfig))
+              (Caml.Digest.to_hex (Caml.Digest.file inferconfig))
         | None ->
             Version.commit
       in
@@ -3798,7 +3758,7 @@ let post_parsing_initialization command_opt =
     in
     let suggest_keep_going = should_print_backtrace_default && not !keep_going in
     let backtrace =
-      if is_infer_exit_zero then "" else Stdlib.Printexc.raw_backtrace_to_string raw_backtrace
+      if is_infer_exit_zero then "" else Caml.Printexc.raw_backtrace_to_string raw_backtrace
     in
     let print_exception () =
       let error prefix msg =
@@ -3834,7 +3794,7 @@ let post_parsing_initialization command_opt =
     Epilogues.run () ;
     Stdlib.exit exitcode
   in
-  Stdlib.Printexc.set_uncaught_exception_handler uncaught_exception_handler ;
+  Caml.Printexc.set_uncaught_exception_handler uncaught_exception_handler ;
   F.set_margin !margin ;
   let set_gc_params () =
     let ctrl = Gc.get () in
@@ -4092,8 +4052,6 @@ and compaction_minimum_interval_s = !compaction_minimum_interval_s
 
 and complete_capture_from = !complete_capture_from
 
-and compute_captured_context = !compute_captured_context
-
 and config_impact_config_field_patterns =
   RevList.rev_map !config_impact_config_field_patterns ~f:Str.regexp
 
@@ -4240,14 +4198,12 @@ and global_tenv = !global_tenv
 and hackc_binary = !hackc_binary
 
 and hack_builder_patterns =
+  let open Yojson.Safe.Util in
   let json = !hack_builder_patterns in
-  match json with
-  | `List [] ->
-      []
-  | json -> (
-    try pulse_hack_builder_patterns_of_yojson json
-    with _ ->
-      L.die UserError "Failed parsing hack-builder-patterns from %a!@\n" Yojson.Safe.pp json )
+  let class_of j = j |> member "class" |> to_string in
+  let finalizers j = j |> member "finalizers" |> to_list |> List.map ~f:to_string in
+  let pattern j = (class_of j, finalizers j) in
+  json |> to_list |> List.map ~f:pattern
 
 
 and hack_builtin_models = !hack_builtin_models
@@ -4581,8 +4537,6 @@ and pulse_model_transfer_ownership_namespace, pulse_model_transfer_ownership =
   RevList.rev_partition_map ~f:aux models
 
 
-and pulse_model_unknown_pure = join_patterns_list (RevList.to_list !pulse_model_unknown_pure)
-
 and pulse_model_unreachable = RevList.to_list !pulse_model_unreachable
 
 and pulse_models_for_erlang = RevList.to_list !pulse_models_for_erlang
@@ -4596,8 +4550,6 @@ and pulse_nullsafe_report_npe = !pulse_nullsafe_report_npe
 and pulse_nullsafe_report_npe_as_separate_issue_type =
   !pulse_nullsafe_report_npe_as_separate_issue_type
 
-
-and pulse_over_approximate_reasoning = !pulse_over_approximate_reasoning
 
 and pulse_prevent_non_disj_top = !pulse_prevent_non_disj_top
 
@@ -4710,8 +4662,6 @@ and python_files_index = !python_files_index
 
 and python_skip_db = !python_skip_db
 
-and python_globals = !python_globals
-
 and qualified_cpp_name_block_list = RevList.to_list !qualified_cpp_name_block_list
 
 and quiet = !quiet
@@ -4720,7 +4670,7 @@ and racerd_always_report_java = !racerd_always_report_java
 
 and racerd_guardedby = !racerd_guardedby
 
-and racerd_ignore_classes = RevList.to_list !racerd_ignore_classes |> IString.Set.of_list
+and racerd_ignore_classes = RevList.to_list !racerd_ignore_classes |> String.Set.of_list
 
 and reactive_mode = !reactive
 

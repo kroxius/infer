@@ -25,7 +25,7 @@ end
 module NodeName : sig
   type t [@@deriving equal]
 
-  module Map : Stdlib.Map.S with type key = t
+  module Map : Caml.Map.S with type key = t
 
   val pp : Format.formatter -> t -> unit
 end
@@ -37,7 +37,7 @@ module SSA : sig
 
   val pp : Format.formatter -> t -> unit
 
-  module Hashtbl : Stdlib.Hashtbl.S with type key = t
+  module Hashtbl : Caml.Hashtbl.S with type key = t
 end
 
 module Ident : sig
@@ -47,7 +47,7 @@ module Ident : sig
 
   val pp : Format.formatter -> t -> unit
 
-  module Hashtbl : Stdlib.Hashtbl.S with type key = t
+  module Hashtbl : Caml.Hashtbl.S with type key = t
 
   module Special : sig
     val name : t
@@ -63,11 +63,11 @@ module ScopedIdent : sig
 end
 
 module QualName : sig
-  type t = {module_name: Ident.t; function_name: Ident.t}
+  type t
 
   val pp : Format.formatter -> t -> unit
 
-  module Map : Stdlib.Map.S with type key = t
+  module Map : Caml.Map.S with type key = t
 end
 
 module UnaryOp : sig
@@ -234,7 +234,6 @@ module CodeInfo : sig
     ; co_varnames: Ident.t array
     ; has_star_arguments: bool
     ; has_star_keywords: bool
-    ; is_async: bool
     ; is_generator: bool }
 end
 

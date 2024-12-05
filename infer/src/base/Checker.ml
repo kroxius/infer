@@ -17,7 +17,6 @@ type t =
   | ConfigImpactAnalysis
   | Cost
   | DisjunctiveDemo
-  | StaticConstructorStallChecker
   | FragmentRetainsView
   | Impurity
   | InefficientKeysetIterator
@@ -174,14 +173,6 @@ let config_unsafe checker =
       ; short_documentation= "Demo of the disjunctive domain, used for testing."
       ; cli_flags= Some {deprecated= []; show_in_help= false}
       ; enabled_by_default= false
-      ; activates= [] }
-  | StaticConstructorStallChecker ->
-      { id= "static-constructor-stall-checker"
-      ; kind= UserFacing {title= "Static Constructor Stall Checker"; markdown_body= ""}
-      ; support= mk_support_func ~clang:Support ()
-      ; short_documentation= "Detect if dispatch_once is called from a static constructor."
-      ; cli_flags= Some {deprecated= []; show_in_help= true}
-      ; enabled_by_default= true
       ; activates= [] }
   | FragmentRetainsView ->
       { id= "fragment-retains-view"

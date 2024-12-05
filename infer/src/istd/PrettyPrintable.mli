@@ -25,13 +25,13 @@ module type PrintableEquatableType = sig
 end
 
 module type PrintableOrderedType = sig
-  include Stdlib.Set.OrderedType
+  include Caml.Set.OrderedType
 
   include PrintableType with type t := t
 end
 
 module type HashableSexpablePrintableOrderedType = sig
-  include Stdlib.Set.OrderedType
+  include Caml.Set.OrderedType
 
   include PrintableType with type t := t
 
@@ -41,13 +41,13 @@ module type HashableSexpablePrintableOrderedType = sig
 end
 
 module type PrintableEquatableOrderedType = sig
-  include Stdlib.Set.OrderedType
+  include Caml.Set.OrderedType
 
   include PrintableEquatableType with type t := t
 end
 
 module type PPSet = sig
-  include Stdlib.Set.S
+  include Caml.Set.S
 
   val is_singleton_or_more : t -> elt IContainer.singleton_or_more
 
@@ -155,7 +155,7 @@ module type MonoMap = sig
 end
 
 module type PPMap = sig
-  include Stdlib.Map.S
+  include Caml.Map.S
 
   val fold_map : 'a t -> init:'b -> f:('b -> 'a -> 'b * 'c) -> 'b * 'c t
 
@@ -263,8 +263,6 @@ module type PPUniqRankSet = sig
   val union_prefer_left : t -> t -> t
   (** in case an element with the same rank is present both in [lhs] and [rhs], keep the one from
       [lhs] in [union_prefer_left lhs rhs] *)
-
-  val merge : t -> t -> f:(elt option -> elt option -> elt option) -> t
 
   val filter : t -> f:(elt -> bool) -> t
 

@@ -22,7 +22,7 @@ let pp_location (loc : Ast.location) =
 
 
 let validate_record_name (env : (_, _) Env.t) name =
-  match IString.Map.find_opt name env.records with
+  match String.Map.find env.records name with
   | None ->
       L.debug Capture Verbose "Record definition not found for '%s'@." name ;
       false
@@ -31,12 +31,12 @@ let validate_record_name (env : (_, _) Env.t) name =
 
 
 let validate_record_field (env : (_, _) Env.t) name field =
-  match IString.Map.find_opt name env.records with
+  match String.Map.find env.records name with
   | None ->
       L.debug Capture Verbose "Record definition not found for '%s'@." name ;
       false
   | Some record_info -> (
-    match IString.Map.find_opt field record_info.field_info with
+    match String.Map.find record_info.field_info field with
     | None ->
         L.debug Capture Verbose "Record field '%s' not found in definition of '%s'@." field name ;
         false
@@ -357,7 +357,7 @@ let rec validate_type (type_ : Ast.type_) =
 let validate_spec_disjunct ({arguments; return; constraints} : Ast.spec_disjunct) =
   List.for_all ~f:validate_type arguments
   && validate_type return
-  && IString.Map.for_all (fun _k v -> validate_type v) constraints
+  && String.Map.for_all ~f:validate_type constraints
 
 
 let validate_spec_arities (func_arity : int) (spec : Ast.spec) =

@@ -114,11 +114,10 @@ OPTIONS
            and/or reporting. (Conversely: --deduplicate)
 
        --no-default-checkers
-           Deactivates: Default checkers: --static-constructor-stall-checker,
-           --fragment-retains-view, --inefficient-keyset-iterator,
-           --liveness, --parameter-not-null-checked, --pulse, --racerd,
-           --siof, --self-in-block, --starvation (Conversely:
-           --default-checkers)
+           Deactivates: Default checkers: --fragment-retains-view,
+           --inefficient-keyset-iterator, --liveness,
+           --parameter-not-null-checked, --pulse, --racerd, --siof,
+           --self-in-block, --starvation (Conversely: --default-checkers)
 
        --detach-analysis-dependency
            Activates: Detach analysis dependencies of checkers during the
@@ -435,16 +434,6 @@ OPTIONS
        --starvation-only
            Activates: Enable starvation and disable all other checkers
            (Conversely: --no-starvation-only)
-
-       --no-static-constructor-stall-checker
-           Deactivates: static-constructor-stall-checker checker: Detect if
-           dispatch_once is called from a static constructor. (Conversely:
-           --static-constructor-stall-checker)
-
-       --static-constructor-stall-checker-only
-           Activates: Enable static-constructor-stall-checker and disable all
-           other checkers (Conversely:
-           --no-static-constructor-stall-checker-only)
 
        --timeout float
            Time after which any checker (except biabduction) should give up
@@ -836,9 +825,6 @@ PULSE CHECKER OPTIONS
            Methods that should be modelled as transfering memory ownership in
            Pulse. Accepted formats are method or namespace::method
 
-       --pulse-model-unknown-pure +string
-           Regex of methods that should be modelled as unknown pure in Pulse
-
        --pulse-models-for-erlang +path
            Provide custom models for Erlang in JSON files or SQLite3. Files
            must end with `.json` or `.db` respectively. If a path to a
@@ -890,11 +876,6 @@ PULSE CHECKER OPTIONS
            @Nullsafe as a separate NULLPTR_DEREFERENCE_IN_NULLSAFE_CLASS
            issue type. (Conversely:
            --no-pulse-nullsafe-report-npe-as-separate-issue)
-
-       --pulse-over-approximate-reasoning
-           Activates: [EXPERIMENTAL] add over-approximate reasoning on top of
-           the under-approximate, disjunctive reasoning of Pulse.
-           (Conversely: --no-pulse-over-approximate-reasoning)
 
        --pulse-recency-limit int
            Maximum number of array elements and structure fields to keep
@@ -1073,14 +1054,6 @@ PULSE CHECKER OPTIONS
 
        --pulse-widen-threshold int
            Stop exploring new paths after int loop iterations
-
-       --python-globals { own-by-closures | own-by-module }
-           Specify the strategy to wire globals dictionnaire into each
-           function
-                - own-by-closures: each closure captured the global
-           dictionary
-           - own-by-module: each function is given the global dictionary as
-           argument (not referenced in the heap to avoid aliases)
 
 RACERD CHECKER OPTIONS
        --racerd-always-report-java

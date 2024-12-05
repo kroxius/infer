@@ -84,7 +84,10 @@ let exec_summary_of_post_common ({InterproceduralAnalysis.proc_desc} as analysis
       ~(is_exceptional_state : bool) : _ ExecutionDomain.base_t SatUnsat.t =
     let open SatUnsat.Import in
     let+ summary_result =
-      AbductiveDomain.Summary.of_post (Procdesc.get_attributes proc_desc) location astate
+      AbductiveDomain.Summary.of_post
+        (Procdesc.get_proc_name proc_desc)
+        (Procdesc.get_attributes proc_desc)
+        location astate
     in
     match (summary_result : _ result) with
     | Ok summary ->
@@ -104,7 +107,7 @@ let exec_summary_of_post_common ({InterproceduralAnalysis.proc_desc} as analysis
               }
           , summary )
         |> Option.value ~default:(exec_domain_of_summary summary)
-    | Error (`UnawaitedAwaitable (summary, astate, allocation_trace, location)) ->
+    | Error (`HackUnawaitedAwaitable (summary, astate, allocation_trace, location)) ->
         (* suppress unawaited awaitable reporting in the case that we're throwing an exception because it leads to
            too many true-but-unhelpful positives. TODO: reinstate reporting in the case that the exception is caught *)
         if is_exceptional_state then (
@@ -113,7 +116,7 @@ let exec_summary_of_post_common ({InterproceduralAnalysis.proc_desc} as analysis
         else
           PulseReport.report_summary_error analysis_data
             ( ReportableError
-                {astate; diagnostic= ResourceLeak {resource= Awaitable; allocation_trace; location}}
+                {astate; diagnostic= ResourceLeak {resource= HackAsync; allocation_trace; location}}
             , summary )
           |> Option.value ~default:(exec_domain_of_summary summary)
     | Error (`HackUnfinishedBuilder (summary, astate, allocation_trace, location, builder_type)) ->
@@ -198,8 +201,7 @@ let force_exit_program analysis_data post =
     ~exception_raised:(fun astate -> ExitProgram astate)
 
 
-let of_posts ({InterproceduralAnalysis.proc_desc} as analysis_data) specialization location posts
-    non_disj =
+let of_posts analysis_data specialization location posts non_disj =
   let pre_post_list =
     List.filter_mapi posts ~f:(fun i exec_state ->
         L.d_printfln "Creating spec out of state #%d:@\n%a" i
@@ -210,8 +212,7 @@ let of_posts ({InterproceduralAnalysis.proc_desc} as analysis_data) specializati
           ~exception_raised:(fun astate -> ExceptionRaised astate)
         |> SatUnsat.sat )
   in
-  { pre_post_list
-  ; non_disj= NonDisjDomain.make_summary (Procdesc.get_attributes proc_desc) location non_disj }
+  {pre_post_list; non_disj= NonDisjDomain.make_summary non_disj}
 
 
 let mk_objc_self_pvar proc_name = Pvar.mk Mangled.self proc_name
@@ -280,7 +281,7 @@ let mk_latent_non_POD_nil_messaging tenv proc_name (proc_attrs : ProcAttributes.
   let** astate = PulseArithmetic.prune_eq_zero self_value astate in
   let++ summary =
     let open SatUnsat.Import in
-    AbductiveDomain.Summary.of_post proc_attrs proc_attrs.loc astate
+    AbductiveDomain.Summary.of_post proc_name proc_attrs proc_attrs.loc astate
     >>| AccessResult.ignore_leaks >>| AccessResult.of_abductive_summary_result
     >>| AccessResult.with_summary
   in
@@ -303,7 +304,7 @@ let mk_objc_nil_messaging_summary tenv (proc_attrs : ProcAttributes.t) =
       match
         (let** astate = mk_nil_messaging_summary_aux tenv proc_name proc_attrs in
          let open SatUnsat.Import in
-         AbductiveDomain.Summary.of_post proc_attrs proc_attrs.loc astate
+         AbductiveDomain.Summary.of_post proc_name proc_attrs proc_attrs.loc astate
          >>| AccessResult.ignore_leaks >>| AccessResult.of_abductive_summary_result
          >>| AccessResult.with_summary )
         |> PulseOperationResult.sat_ok

@@ -195,9 +195,7 @@ module Hack : sig
 end
 
 module Python : sig
-  type t = private {class_name: PythonClassName.t option; function_name: string}
-
-  val get_class_name_as_a_string : t -> string option
+  type t
 end
 
 (** Type of procedure names. *)
@@ -266,7 +264,7 @@ include module type of struct
 end
 
 (** Hash tables with proc names as keys. *)
-module Hash : Stdlib.Hashtbl.S with type key = t
+module Hash : Caml.Hashtbl.S with type key = t
 
 module LRUHash : LRUHashtbl.S with type key = t
 
@@ -487,22 +485,15 @@ val is_erlang_call_unqualified : t -> bool
 
 val is_erlang_call_qualified : t -> bool
 
+val is_hack_builtins : t -> bool
+
+val is_hack_constinit : t -> bool
+
 val has_hack_classname : t -> bool
 
 val is_hack_async_name : t -> bool
 (* Checks if the function name starts with "gen", which is a (lint-checked) convention for it being async at Meta *)
 
-val is_hack_builtins : t -> bool
-
-val is_hack_constinit : t -> bool
-
 val is_hack_construct : t -> bool
-
-val is_hack_internal : t -> bool
-(* Check if the function is not a model nor one of the internal functions necessary for implementation *)
-
-val is_hack_invoke : t -> bool
-
-val is_hack_late_binding : t -> bool
 
 val is_hack_xinit : t -> bool

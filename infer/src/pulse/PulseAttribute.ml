@@ -29,8 +29,8 @@ module Attribute = struct
     | JavaResource of JavaClassName.t
     | CSharpResource of CSharpClassName.t
     | ObjCAlloc
+    | HackAsync
     | HackBuilderResource of HackClassName.t
-    | Awaitable (* used for Hack and Python *)
     | FileDescriptor
   [@@deriving compare, equal]
 
@@ -53,10 +53,10 @@ module Attribute = struct
         F.fprintf fmt "csharp resource %a" CSharpClassName.pp class_name
     | ObjCAlloc ->
         F.fprintf fmt "alloc"
+    | HackAsync ->
+        F.fprintf fmt "hack async"
     | HackBuilderResource class_name ->
         F.fprintf fmt "hack builder %a" HackClassName.pp class_name
-    | Awaitable ->
-        F.fprintf fmt "awaitable"
     | FileDescriptor ->
         F.pp_print_string fmt "file descriptor"
 
@@ -206,12 +206,6 @@ module Attribute = struct
     let union =
       union (fun _ left right ->
           (if Timestamp.compare (fst left) (fst right) <= 0 then left else right) |> Option.some )
-
-
-    let inter =
-      merge (fun _ left right ->
-          Option.both left right
-          |> Option.bind ~f:(fun (md1, md2) -> Option.some_if (Metadata.equal md1 md2) md1) )
   end
 
   type t =
@@ -241,7 +235,7 @@ module Attribute = struct
     | MustNotBeTainted of TaintSink.t TaintSinkMap.t
     | JavaResourceReleased
     | CSharpResourceReleased
-    | AwaitedAwaitable
+    | HackAsyncAwaited
     | PropagateTaintFrom of taint_propagation_reason * taint_in list
       (* [v -> PropagateTaintFrom \[v1; ..; vn\]] does not
          retain [v1] to [vn], in fact they should be collected
@@ -302,7 +296,7 @@ module Attribute = struct
 
   let last_lookup_rank = Variants.lastlookup.rank
 
-  let awaited_awaitable_rank = Variants.awaitedawaitable.rank
+  let hack_async_awaited_rank = Variants.hackasyncawaited.rank
 
   let csharp_resource_released_rank = Variants.csharpresourcereleased.rank
 
@@ -397,7 +391,7 @@ module Attribute = struct
         F.pp_print_string f "Released"
     | CSharpResourceReleased ->
         F.pp_print_string f "Released"
-    | AwaitedAwaitable ->
+    | HackAsyncAwaited ->
         F.pp_print_string f "Awaited"
     | PropagateTaintFrom (reason, taints_in) ->
         F.fprintf f "PropagateTaintFrom(%a, [%a])" pp_taint_propagation_reason reason
@@ -458,7 +452,7 @@ module Attribute = struct
     | JavaResourceReleased
     | LastLookup _
     | CSharpResourceReleased
-    | AwaitedAwaitable
+    | HackAsyncAwaited
     | HackBuilder _ (* TODO: right choice? Planning on doing on the outside in pulse call/return *)
     | PropagateTaintFrom _
     | ReturnedFromUnknown _
@@ -503,7 +497,7 @@ module Attribute = struct
     | JavaResourceReleased
     | LastLookup _
     | CSharpResourceReleased
-    | AwaitedAwaitable
+    | HackAsyncAwaited
     | HackBuilder _ (* TODO: right choice again? *)
     | PropagateTaintFrom _
     | ReturnedFromUnknown _
@@ -546,7 +540,7 @@ module Attribute = struct
     | JavaResourceReleased
     | LastLookup _
     | CSharpResourceReleased
-    | AwaitedAwaitable
+    | HackAsyncAwaited
     | HackBuilder _
     | HackConstinitCalled
     | MustBeInitialized _
@@ -648,7 +642,7 @@ module Attribute = struct
       | CSharpResourceReleased
       | DictContainConstKeys
       | EndOfCollection
-      | AwaitedAwaitable
+      | HackAsyncAwaited
       | HackBuilder _
       | HackConstinitCalled
       | Initialized
@@ -670,7 +664,7 @@ module Attribute = struct
     | ObjCAlloc, _
     | FileDescriptor, Some (FClose, _) ->
         true
-    | JavaResource _, _ | CSharpResource _, _ | HackBuilderResource _, _ | Awaitable, _ ->
+    | JavaResource _, _ | CSharpResource _, _ | HackAsync, _ | HackBuilderResource _, _ ->
         is_released
     | _ ->
         false
@@ -678,26 +672,8 @@ module Attribute = struct
 
   let is_hack_resource allocator =
     match allocator with
-    | Awaitable | HackBuilderResource _ ->
+    | HackAsync | HackBuilderResource _ ->
         true
-    | CMalloc
-    | CustomMalloc _
-    | CRealloc
-    | CustomRealloc _
-    | CppNew
-    | CppNewArray
-    | ObjCAlloc
-    | JavaResource _
-    | CSharpResource _
-    | FileDescriptor ->
-        false
-
-
-  let is_python_resource allocator =
-    match allocator with
-    | Awaitable ->
-        true
-    | HackBuilderResource _
     | CMalloc
     | CustomMalloc _
     | CRealloc
@@ -759,7 +735,7 @@ module Attribute = struct
       | DictContainConstKeys
       | DictReadConstKeys _
       | EndOfCollection
-      | AwaitedAwaitable
+      | HackAsyncAwaited
       | HackBuilder _
       | HackConstinitCalled
       | InReportedRetainCycle
@@ -915,7 +891,7 @@ module Attributes = struct
 
   let is_java_resource_released = mem_by_rank Attribute.java_resource_released_rank
 
-  let is_awaited_awaitable = mem_by_rank Attribute.awaited_awaitable_rank
+  let is_hack_async_awaited = mem_by_rank Attribute.hack_async_awaited_rank
 
   let get_hack_builder =
     get_by_rank Attribute.hack_builder_rank ~dest:(function [@warning "-partial-match"]
@@ -1013,7 +989,7 @@ module Attributes = struct
     || mem_by_rank Attribute.invalid_rank attrs
     || mem_by_rank Attribute.unknown_effect_rank attrs
     || mem_by_rank Attribute.java_resource_released_rank attrs
-    || mem_by_rank Attribute.awaited_awaitable_rank attrs
+    || mem_by_rank Attribute.hack_async_awaited_rank attrs
     || mem_by_rank Attribute.hack_builder_rank attrs
     || mem_by_rank Attribute.csharp_resource_released_rank attrs
     || mem_by_rank Attribute.propagate_taint_from_rank attrs
@@ -1074,11 +1050,10 @@ module Attributes = struct
         let is_released =
           is_java_resource_released attributes
           || is_csharp_resource_released attributes
-          || is_awaited_awaitable attributes
+          || is_hack_async_awaited attributes
           || is_hack_builder_discardable
                attributes (* Not entirely sure about the definition of this *)
         in
-        L.d_printfln ~color:Orange "address is allocated: is_released=%b" is_released ;
         if Attribute.alloc_free_match allocator invalidation is_released then None
         else allocated_opt )
 

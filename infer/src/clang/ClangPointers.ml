@@ -7,15 +7,15 @@
 
 open! IStd
 module L = Logging
-module Map = IInt.Map
+module Map = Map.Make (Int)
 
-let ivar_to_property_table = IInt.Hash.create 256
+let ivar_to_property_table = Int.Table.create ~size:256 ()
 
-let pointer_decl_table = IInt.Hash.create 256
+let pointer_decl_table = Int.Table.create ~size:256 ()
 
-let pointer_stmt_table = IInt.Hash.create 256
+let pointer_stmt_table = Int.Table.create ~size:256 ()
 
-let pointer_type_table = IInt.Hash.create 256
+let pointer_type_table = Int.Table.create ~size:256 ()
 
 let empty_v = Clang_ast_visit.empty_visitor
 
@@ -55,7 +55,7 @@ let get_val_from_node node =
 let add_node_to_cache node cache =
   let key = get_ptr_from_node node in
   let data = get_val_from_node node in
-  IInt.Hash.replace cache key data
+  Int.Table.set cache ~key ~data
 
 
 let process_decl _ decl =
@@ -63,7 +63,7 @@ let process_decl _ decl =
   match decl with
   | Clang_ast_t.ObjCPropertyDecl (_, _, {opdi_ivar_decl= Some decl_ref}) ->
       let ivar_pointer = decl_ref.Clang_ast_t.dr_decl_pointer in
-      IInt.Hash.replace ivar_to_property_table ivar_pointer decl
+      Int.Table.set ivar_to_property_table ~key:ivar_pointer ~data:decl
   | _ ->
       ()
 
@@ -113,10 +113,10 @@ let complete_source_location _ source_loc =
 
 
 let reset_cache () =
-  IInt.Hash.clear pointer_decl_table ;
-  IInt.Hash.clear pointer_stmt_table ;
-  IInt.Hash.clear pointer_type_table ;
-  IInt.Hash.clear ivar_to_property_table ;
+  Int.Table.clear pointer_decl_table ;
+  Int.Table.clear pointer_stmt_table ;
+  Int.Table.clear pointer_type_table ;
+  Int.Table.clear ivar_to_property_table ;
   reset_sloc previous_sloc
 
 

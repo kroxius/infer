@@ -11,10 +11,7 @@ val proc_decl_to_sil : Textual.Lang.t -> Textual.ProcDecl.t -> Procname.t
 [@@warning "-unused-value-declaration"]
 
 val module_to_sil :
-     Textual.Lang.t
-  -> Textual.Module.t
-  -> TextualDecls.t
-  -> (Cfg.t * Tenv.t, Textual.transform_error list) result
+  Textual.Module.t -> (Cfg.t * Tenv.t * Textual.Module.t, Textual.transform_error list) result
 (** convert a Textual unit into Infer internal representation (cfg + tenv). During the process the
     textual representation undergoes several transformations. The result is passed as the third
     element of the returned tuple *)
@@ -54,20 +51,6 @@ val hack_mixed_static_companion_type_name : Typ.name
 val hack_builtins_type_name : Typ.name
 
 val hack_root_type_name : Typ.name
-
-val python_dict_type_name : Typ.name
-
-val python_int_type_name : Typ.name
-
-val python_none_type_name : Typ.name
-
-val python_mixed_type_name : Typ.name
-
-val python_tuple_type_name : Typ.name
-
-val python_unresolved_module_type_name : Typ.name
-
-val python_resolved_module_type_name : Typ.name
 
 val wildcard_sil_fieldname : Textual.Lang.t -> string -> Fieldname.t
 

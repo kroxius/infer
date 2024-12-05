@@ -110,10 +110,6 @@ module.exports = {
     [
       "@docusaurus/preset-classic",
       {
-        blog: {
-          onInlineAuthors: 'ignore',
-          onUntruncatedBlogPosts: 'ignore',
-        },
         docs: { sidebarPath: require.resolve("./sidebars.js") },
         theme: { customCss: require.resolve("./src/css/custom.css") },
         gtag: {

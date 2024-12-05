@@ -70,11 +70,10 @@ module Local = struct
       | ConstantString of string
       | Cell of (Cell.t[@sexp.opaque])
     [@@deriving compare, equal, sexp, hash]
-
-    let pp _ _ = assert false
   end
 
   include T
+  include Comparable.Make (T)
 
   let pp fmt local =
     match local with
@@ -89,10 +88,10 @@ module Local = struct
 
 
   module Set = struct
-    include PrettyPrintable.MakeHashSexpPPSet (T)
+    include Set
 
     (** Shortcut for adding a Cell-variant local *)
-    let add_cell set cell = add (Cell cell) set
+    let add_cell set cell = add set (Cell cell)
   end
 end
 
@@ -434,13 +433,13 @@ end = struct
     module FieldPathSet = struct
       (* Sets of field paths, that shall be associated to an argument index *)
 
-      module M = PrettyPrintable.MakeHashSexpPPSet (FieldPath)
+      module M = Set.Make_tree (FieldPath)
       include M
 
       let pp ~arg_index =
         (* Prints: $argN#foo#bar $argN#other#field *)
         let pp_field_path = Fmt.using (fun path -> arg_index & path) F.arg_path in
-        IFmt.Labelled.iter ~sep:Fmt.sp (fun a ~f -> M.iter f a) pp_field_path
+        IFmt.Labelled.iter ~sep:Fmt.sp M.iter pp_field_path
     end
 
     (* Marshallable maps from integer indices. Note: using an array instead of Map could improve the
@@ -470,15 +469,15 @@ end = struct
         | None ->
             FieldPathSet.singleton arg_field_path
         | Some field_path_set ->
-            FieldPathSet.add arg_field_path field_path_set )
+            FieldPathSet.add field_path_set arg_field_path )
 
 
     let fold t ~f ~init =
       IntMap.fold
         ~f:(fun ~key:arg_index ~data:field_path_set acc ->
           FieldPathSet.fold
-            (fun arg_field_path acc -> f ~arg_index ~arg_field_path acc)
-            field_path_set acc )
+            ~f:(fun acc arg_field_path -> f ~arg_index ~arg_field_path acc)
+            ~init:acc field_path_set )
         ~init t
   end
 
@@ -1011,7 +1010,7 @@ module Out = struct
       of_sequence
         (Sequence.map
            ~f:(fun c -> Z.of_int (int_of_char c))
-           (Sequence.of_seq (Stdlib.String.to_seq s)) )
+           (Sequence.of_seq (Caml.String.to_seq s)) )
 
 
     let of_procname procname : t = of_string (Procname.hashable_name procname)
@@ -1515,7 +1514,7 @@ end = struct
 
     let local_set local_set : unit t =
      fun shapes node f astate ->
-      Local.Set.fold (fun one_local acc -> local one_local shapes node f acc) local_set astate
+      Set.fold ~f:(fun acc one_local -> local one_local shapes node f acc) ~init:astate local_set
 
 
     let atom atom_name : unit t = local (ConstantAtom atom_name)

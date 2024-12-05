@@ -279,7 +279,7 @@ module Name : sig
 
   module Map : PrettyPrintable.PPMap with type key = t
 
-  module Hash : Stdlib.Hashtbl.S with type key = t
+  module Hash : Caml.Hashtbl.S with type key = t
 end
 
 val equal : t -> t -> bool
@@ -353,8 +353,6 @@ val shared_pointer_matcher : QualifiedCppName.Match.quals_matcher
 val is_shared_pointer : t -> bool
 
 val is_folly_coro : t -> bool
-
-val thrift_field_refs : string list
 
 val is_thrift_field_ref : t -> bool
 

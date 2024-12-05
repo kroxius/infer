@@ -8,7 +8,7 @@
 open! IStd
 module F = Format
 module L = Logging
-module Gc = Stdlib.Gc
+module Gc = Caml.Gc
 
 (** a subset of {!Gc.stat} that can be aggregated across multiple processes *)
 type t =

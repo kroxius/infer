@@ -7,7 +7,7 @@
 
 open! IStd
 module F = Format
-module Hashtbl = Stdlib.Hashtbl
+module Hashtbl = Caml.Hashtbl
 
 module type S = sig
   type key

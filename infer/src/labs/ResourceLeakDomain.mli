@@ -12,3 +12,7 @@ include AbstractDomain.S
 val initial : t
 
 type summary = t
+
+val acquire_resource : t -> t
+val release_resource : t -> t
+val has_leak : t -> bool

@@ -23,13 +23,13 @@ module type PrintableEquatableType = sig
 end
 
 module type PrintableOrderedType = sig
-  include Stdlib.Set.OrderedType
+  include Caml.Set.OrderedType
 
   include PrintableType with type t := t
 end
 
 module type HashableSexpablePrintableOrderedType = sig
-  include Stdlib.Set.OrderedType
+  include Caml.Set.OrderedType
 
   include PrintableType with type t := t
 
@@ -39,13 +39,13 @@ module type HashableSexpablePrintableOrderedType = sig
 end
 
 module type PrintableEquatableOrderedType = sig
-  include Stdlib.Set.OrderedType
+  include Caml.Set.OrderedType
 
   include PrintableEquatableType with type t := t
 end
 
 module type PPSet = sig
-  include Stdlib.Set.S
+  include Caml.Set.S
 
   val is_singleton_or_more : t -> elt IContainer.singleton_or_more
 
@@ -153,7 +153,7 @@ module type MonoMap = sig
 end
 
 module type PPMap = sig
-  include Stdlib.Map.S
+  include Caml.Map.S
 
   val fold_map : 'a t -> init:'b -> f:('b -> 'a -> 'b * 'c) -> 'b * 'c t
 
@@ -187,7 +187,7 @@ let pp_collection_common ?hov ~pp_item fmt c =
 let pp_collection ~pp_item fmt c = pp_collection_common ~pp_item fmt c
 
 module MakePPSet (Ord : PrintableOrderedType) = struct
-  include Stdlib.Set.Make (Ord)
+  include Caml.Set.Make (Ord)
 
   let is_singleton_or_more s =
     if is_empty s then IContainer.Empty
@@ -223,7 +223,7 @@ module MakeHashSexpPPSet (Ord : HashableSexpablePrintableOrderedType) = struct
 end
 
 module MakePPMap (Ord : PrintableOrderedType) = struct
-  include Stdlib.Map.Make (Ord)
+  include Caml.Map.Make (Ord)
 
   let fold_mapi m ~init ~f =
     let acc = ref init in
@@ -377,8 +377,6 @@ module type PPUniqRankSet = sig
 
   val union_prefer_left : t -> t -> t
 
-  val merge : t -> t -> f:(elt option -> elt option -> elt option) -> t
-
   val filter : t -> f:(elt -> bool) -> t
 
   val filter_map : t -> f:(elt -> elt option) -> t
@@ -465,8 +463,6 @@ module MakePPUniqRankSet
   let update value map = Map.update (Val.to_rank value) (fun _ -> Some value) map
 
   let union_prefer_left m1 m2 = Map.union (fun _rank value1 _value2 -> Some value1) m1 m2
-
-  let merge m1 m2 ~f = Map.merge (fun _rank value1 value2 -> f value1 value2) m1 m2
 
   let filter map ~f = Map.filter (fun _ v -> f v) map
 

@@ -429,20 +429,21 @@ module Implementation = struct
     in
     let update_statement =
       let stmts =
-        List.fold PayloadId.database_fields ~init:IString.Map.empty ~f:(fun acc payload_id ->
-            IString.Map.add payload_id
-              (Database.register_statement AnalysisDatabase
-                 {|
+        List.fold PayloadId.database_fields ~init:String.Map.empty ~f:(fun acc payload_id ->
+            String.Map.add_exn ~key:payload_id
+              ~data:
+                (Database.register_statement AnalysisDatabase
+                   {|
                      UPDATE specs SET
                        report_summary = :report_summary,
                        summary_metadata = :summary_metadata,
                        %s = :value
                      WHERE proc_uid = :proc_uid
                    |}
-                 payload_id )
+                   payload_id )
               acc )
       in
-      fun payload_id -> IString.Map.find (PayloadId.Variants.to_name payload_id) stmts
+      fun payload_id -> String.Map.find_exn stmts (PayloadId.Variants.to_name payload_id)
     in
     fun analysis_req ~proc_uid ~proc_name ~merge_pulse_payload ~merge_report_summary
         ~merge_summary_metadata ->
@@ -627,7 +628,7 @@ module Command = struct
         Implementation.update_report_summary ~proc_uid ~merge_report_summary
 end
 
-type response = Ack | Error of (exn * Stdlib.Printexc.raw_backtrace)
+type response = Ack | Error of (exn * Caml.Printexc.raw_backtrace)
 
 let server_pid : Pid.t option ref = ref None
 
@@ -655,7 +656,7 @@ module Server = struct
         Command.execute command ;
         Marshal.to_channel out_channel Ack []
       with exn ->
-        Marshal.to_channel out_channel (Error (exn, Stdlib.Printexc.get_raw_backtrace ())) [] ) ;
+        Marshal.to_channel out_channel (Error (exn, Caml.Printexc.get_raw_backtrace ())) [] ) ;
     Out_channel.flush out_channel ;
     In_channel.close in_channel ;
     let useful_time = ExecutionDuration.add_duration_since useful_time now in
@@ -692,7 +693,7 @@ module Server = struct
     | Ack ->
         ()
     | Error (exn, exn_backtrace) ->
-        Stdlib.Printexc.raise_with_backtrace exn exn_backtrace ) ;
+        Caml.Printexc.raise_with_backtrace exn exn_backtrace ) ;
     In_channel.close in_channel
 
 

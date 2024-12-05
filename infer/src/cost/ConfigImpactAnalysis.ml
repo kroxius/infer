@@ -1049,7 +1049,7 @@ module TransferFunctions = struct
 
   let is_cheap_system_method =
     let cheap_system_methods =
-      IString.Set.of_list
+      String.Set.of_list
         [ "clearProperty"
         ; "console"
         ; "currentTimeMillis"
@@ -1071,7 +1071,7 @@ module TransferFunctions = struct
         ; "setProperty"
         ; "setSecurityManager" ]
     in
-    fun _ method_name -> IString.Set.mem method_name cheap_system_methods
+    fun _ method_name -> String.Set.mem cheap_system_methods method_name
 
 
   let is_known_cheap_method =

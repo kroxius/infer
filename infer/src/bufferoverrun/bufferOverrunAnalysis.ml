@@ -135,7 +135,7 @@ module TransferFunctions = struct
                     Some loc
                 | _ ->
                     None
-              with Not_found_s _ | Stdlib.Not_found -> None )
+              with Not_found_s _ | Caml.Not_found -> None )
       in
       match Dom.Mem.find_ret_alias callee_exit_mem with
       | Bottom ->
@@ -237,10 +237,11 @@ module TransferFunctions = struct
 
 
   let join_java_static_final =
-    let known_java_static_fields = IString.Set.of_list [".EMPTY"] in
+    let known_java_static_fields = String.Set.of_list [".EMPTY"] in
     let is_known_java_static_field fn =
       let fieldname = Fieldname.to_string fn in
-      IString.Set.exists (fun suffix -> String.is_suffix fieldname ~suffix) known_java_static_fields
+      String.Set.exists known_java_static_fields ~f:(fun suffix ->
+          String.is_suffix fieldname ~suffix )
     in
     let copy_reachable_locs_from loc ~from_mem ~to_mem =
       let copy loc acc =
@@ -278,11 +279,11 @@ module TransferFunctions = struct
 
 
   let modeled_load_of_empty_collection_opt =
-    let known_empty_collections = IString.Set.of_list ["EMPTY_LIST"; "EMPTY_SET"; "EMPTY_MAP"] in
+    let known_empty_collections = String.Set.of_list ["EMPTY_LIST"; "EMPTY_SET"; "EMPTY_MAP"] in
     fun exp model_env ret mem ->
       match exp with
       | Exp.Lfield (_, fieldname, typ)
-        when IString.Set.mem (Fieldname.get_field_name fieldname) known_empty_collections
+        when String.Set.mem known_empty_collections (Fieldname.get_field_name fieldname)
              && String.equal "java.util.Collections" (Typ.to_string typ) ->
           Models.Collection.create_collection model_env ~ret mem ~length:Itv.zero |> Option.some
       | _ ->

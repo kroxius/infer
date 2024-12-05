@@ -107,7 +107,6 @@ type t =
   ; is_cpp_copy_assignment: bool  (** true if the procedure is a copy assignment *)
   ; is_cpp_copy_ctor: bool  (** true if the procedure is a copy constructor *)
   ; is_cpp_move_ctor: bool  (** true if the procedure is a move constructor *)
-  ; is_static_ctor: bool  (** true if the procedure has the constructor attribute *)
   ; is_cpp_deleted: bool  (** true if the procedure is deleted *)
   ; is_cpp_implicit: bool
         (** returns false if the declaration exists in code and true if it was created implicitly by
@@ -115,8 +114,7 @@ type t =
   ; is_defined: bool  (** true if the procedure is defined, and not just declared *)
   ; is_java_synchronized_method: bool  (** the procedure is a Java synchronized method *)
   ; is_csharp_synchronized_method: bool  (** the procedure is a C# synchronized method *)
-  ; is_async: bool
-  ; is_closure_wrapper: bool
+  ; is_hack_async: bool
   ; is_hack_wrapper: bool
   ; block_as_arg_attributes: block_as_arg_attributes option
         (** Present if the procedure is an Objective-C block that has been passed to a given method
@@ -130,9 +128,6 @@ type t =
   ; hack_variadic_position: int option
         (** the procedure is variadic and [Some n] means the variadic vector is composed of the
             arguments n, n+1, ..., length formals -1 *)
-  ; python_args: string list
-        (** each python function has a list of parameters that we store as a special ProcAttribute
-            while list formals will only contain dict parameters like Python locals *)
   ; sentinel_attr: (int * int) option  (** __attribute__((sentinel(int, int))) *)
   ; specialized_with_aliasing_info: specialized_with_aliasing_info option
   ; specialized_with_closures_info: specialized_with_closures_info option
@@ -205,14 +200,12 @@ let default translation_unit proc_name =
   ; is_cpp_copy_assignment= false
   ; is_cpp_copy_ctor= false
   ; is_cpp_move_ctor= false
-  ; is_static_ctor= false
   ; is_cpp_deleted= false
   ; is_cpp_implicit= false
   ; is_defined= false
   ; is_java_synchronized_method= false
   ; is_csharp_synchronized_method= false
-  ; is_async= false
-  ; is_closure_wrapper= false
+  ; is_hack_async= false
   ; is_hack_wrapper= false
   ; block_as_arg_attributes= None
   ; is_no_return= false
@@ -223,7 +216,6 @@ let default translation_unit proc_name =
   ; is_synthetic_method= false
   ; is_clang_variadic= false
   ; hack_variadic_position= None
-  ; python_args= []
   ; sentinel_attr= None
   ; clang_method_kind= ClangMethodKind.C_FUNCTION
   ; loc= Location.dummy
@@ -286,14 +278,12 @@ let pp f
      ; is_cpp_copy_assignment
      ; is_cpp_copy_ctor
      ; is_cpp_move_ctor
-     ; is_static_ctor
      ; is_cpp_deleted
      ; is_cpp_implicit
      ; is_defined
      ; is_java_synchronized_method
      ; is_csharp_synchronized_method
-     ; is_async
-     ; is_closure_wrapper
+     ; is_hack_async
      ; is_hack_wrapper
      ; block_as_arg_attributes
      ; is_no_return
@@ -304,7 +294,6 @@ let pp f
      ; is_synthetic_method
      ; is_clang_variadic
      ; hack_variadic_position
-     ; python_args
      ; sentinel_attr
      ; clang_method_kind
      ; loc
@@ -353,7 +342,6 @@ let pp f
     is_cpp_copy_assignment f () ;
   pp_bool_default ~default:default.is_cpp_copy_ctor "is_cpp_copy_ctor" is_cpp_copy_ctor f () ;
   pp_bool_default ~default:default.is_cpp_move_ctor "is_cpp_move_ctor" is_cpp_move_ctor f () ;
-  pp_bool_default ~default:default.is_static_ctor "is_static_ctor" is_static_ctor f () ;
   pp_bool_default ~default:default.is_cpp_deleted "is_deleted" is_cpp_deleted f () ;
   pp_bool_default ~default:default.is_cpp_implicit "is_cpp_implicit" is_cpp_implicit f () ;
   pp_bool_default ~default:default.is_defined "is_defined" is_defined f () ;
@@ -361,8 +349,7 @@ let pp f
     is_java_synchronized_method f () ;
   pp_bool_default ~default:default.is_csharp_synchronized_method "is_csharp_synchronized_method"
     is_csharp_synchronized_method f () ;
-  pp_bool_default ~default:default.is_async "is_async" is_async f () ;
-  pp_bool_default ~default:default.is_closure_wrapper "is_closure_wrapper" is_closure_wrapper f () ;
+  pp_bool_default ~default:default.is_hack_async "is_hack_async" is_hack_async f () ;
   pp_bool_default ~default:default.is_hack_wrapper "is_hack_wrapper" is_hack_wrapper f () ;
   if
     not
@@ -395,8 +382,6 @@ let pp f
     () ;
   pp_bool_default ~default:default.is_clang_variadic "is_clang_variadic" is_clang_variadic f () ;
   Option.iter hack_variadic_position ~f:(fun n -> F.fprintf f "; hack_variadic_position= %d@," n) ;
-  if Language.curr_language_is Python then
-    F.fprintf f "; python_args= [%a]," (Pp.semicolon_seq F.pp_print_string) python_args ;
   if not ([%equal: (int * int) option] default.sentinel_attr sentinel_attr) then
     F.fprintf f "; sentinel_attr= %a@,"
       (Pp.option (Pp.pair ~fst:F.pp_print_int ~snd:F.pp_print_int))

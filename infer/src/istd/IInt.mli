@@ -7,12 +7,12 @@
 
 module F = Format
 
-module Map : Stdlib.Map.S with type key = int
+module Map : Caml.Map.S with type key = int
 
 module Set : sig
-  include Stdlib.Set.S with type elt = int
+  include Caml.Set.S with type elt = int
 
   val pp : F.formatter -> t -> unit
 end
 
-module Hash : Stdlib.Hashtbl.S with type key = int
+module Hash : Caml.Hashtbl.S with type key = int

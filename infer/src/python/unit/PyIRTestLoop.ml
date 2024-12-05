@@ -232,7 +232,7 @@ async def async_loop1():
           return None
 
 
-      async function dummy.async_loop1(doc):
+      function dummy.async_loop1(doc):
         b0:
           $GenStartCoroutine()
           n0 <- GLOBAL[get_docs]
@@ -268,20 +268,7 @@ async def async_loop2():
           return None
 
 
-      async function dummy.async_loop2():
-        b0:
-          $GenStartCoroutine()
-          n0 <- $MakeFunction["_$listcomp", "dummy.async_loop2._$listcomp", None, None, None, None]
-          n1 <- GLOBAL[read]
-          n2 <- $Call(n1, None)
-          n3 <- $CallMethod[__aiter__](n2, None)
-          n4 <- $Call(n0, n3, None)
-          n5 <- $GetAwaitable(n4, None)
-          n6 <- $YieldFrom(n5, None, None)
-          return None
-
-
-      async function dummy.async_loop2._$listcomp(.0):
+      function dummy.async_loop2._$listcomp(.0):
         b0:
           $GenStartCoroutine()
           n0 <- LOCAL[.0]
@@ -294,7 +281,20 @@ async def async_loop2():
           LOCAL[x] <- n2
           n4 <- LOCAL[x]
           n5 <- $ListAppend($BuildList(), n4, None)
-          jmp b1 |}]
+          jmp b1
+
+
+      function dummy.async_loop2():
+        b0:
+          $GenStartCoroutine()
+          n0 <- $MakeFunction["_$listcomp", "dummy.async_loop2._$listcomp", None, None, None, None]
+          n1 <- GLOBAL[read]
+          n2 <- $Call(n1, None)
+          n3 <- $CallMethod[__aiter__](n2, None)
+          n4 <- $Call(n0, n3, None)
+          n5 <- $GetAwaitable(n4, None)
+          n6 <- $YieldFrom(n5, None, None)
+          return None |}]
 
 
 let%expect_test _ =

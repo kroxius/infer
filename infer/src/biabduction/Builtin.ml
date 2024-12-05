@@ -38,7 +38,7 @@ let check_register_populated () =
 (** get the symbolic execution handler associated to the builtin function name *)
 let get name : t option =
   try Some (Procname.Hash.find builtin_functions name)
-  with Stdlib.Not_found ->
+  with Caml.Not_found ->
     check_register_populated () ;
     None
 

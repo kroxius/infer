@@ -179,7 +179,7 @@ let mk_full_summary payloads (report_summary : ReportSummary.t)
 
 
 module OnDisk = struct
-  module Hash = Stdlib.Hashtbl.Make (struct
+  module Hash = Caml.Hashtbl.Make (struct
     type t = Procname.t * AnalysisRequest.t [@@deriving equal, hash]
   end)
 
@@ -272,17 +272,17 @@ module OnDisk = struct
     match Hash.find cache (proc_name, analysis_req) with
     | summary ->
         found_from_cache summary
-    | exception Stdlib.Not_found -> (
+    | exception Caml.Not_found -> (
       match (analysis_req : AnalysisRequest.t) with
       | All ->
           (* We already tried to find the cache for [All]. *)
           not_found_from_cache ()
       | One _ | CheckerWithoutPayload _ -> (
         (* If there is a cache for [All], we use it. *)
-        match Hash.find cache (proc_name, AnalysisRequest.all) with
+        match Hash.find cache (proc_name, analysis_req) with
         | summary ->
             found_from_cache summary
-        | exception Stdlib.Not_found ->
+        | exception Caml.Not_found ->
             not_found_from_cache () ) )
 
 

@@ -7,12 +7,12 @@
 
 open! Core
 module F = Format
-module Map = Stdlib.Map.Make (Int)
+module Map = Caml.Map.Make (Int)
 
 module Set = struct
-  include Stdlib.Set.Make (Int)
+  include Caml.Set.Make (Int)
 
   let pp fmt set = Fmt.braces (Fmt.iter iter ~sep:Fmt.comma F.pp_print_int) fmt set
 end
 
-module Hash = Stdlib.Hashtbl.Make (Int)
+module Hash = Caml.Hashtbl.Make (Int)

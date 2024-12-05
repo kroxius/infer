@@ -138,13 +138,7 @@ type location = Primary | Secondary of string [@@deriving show {with_path= false
 let results_dir_get_path entry = ResultsDirEntryName.get_path ~results_dir:Config.results_dir entry
 
 let get_db_path location id =
-  match location with Secondary file -> file | Primary -> results_dir_get_path (get_db_entry id)
-
-
-let do_in_db_dir db_path ~f =
-  let dir = Filename.dirname db_path in
-  let base_name = Filename.basename db_path in
-  Utils.do_in_dir ~dir ~f:(fun () -> f base_name)
+  match location with Primary -> results_dir_get_path (get_db_entry id) | Secondary file -> file
 
 
 let create_db location id =
@@ -159,7 +153,7 @@ let create_db location id =
           "results." ^ Pid.to_string pid ^ ".db" )
       ".tmp"
   in
-  let db = do_in_db_dir temp_db_path ~f:(fun db_path -> Sqlite3.db_open ~mutex:`FULL db_path) in
+  let db = Sqlite3.db_open ~mutex:`FULL temp_db_path in
   SqliteUtils.exec db ~log:"sqlite page size"
     ~stmt:(Printf.sprintf "PRAGMA page_size=%d" Config.sqlite_page_size) ;
   create_tables db id ;
@@ -304,9 +298,8 @@ end = struct
     db_close_1 id ;
     let db_path = get_db_path location id in
     let db =
-      do_in_db_dir db_path ~f:(fun db_path ->
-          Sqlite3.db_open ~mode:`NO_CREATE ~cache:`PRIVATE ~mutex:`FULL ?vfs:Config.sqlite_vfs
-            ~uri:true db_path )
+      Sqlite3.db_open ~mode:`NO_CREATE ~cache:`PRIVATE ~mutex:`FULL ?vfs:Config.sqlite_vfs ~uri:true
+        db_path
     in
     Sqlite3.busy_timeout db Config.sqlite_lock_timeout ;
     SqliteUtils.exec db ~log:"mmap"

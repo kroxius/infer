@@ -23,9 +23,7 @@
    -open
    ATDGenerated
    -open
-   OpenSource
-   -open
-   Ppx_yojson_conv_lib.Yojson_conv.Primitives))
+   OpenSource))
  (libraries
   cmdliner
   core
@@ -50,7 +48,6 @@
    ppx_sexp_conv
    ppx_show
    ppx_variants_conv
-   ppx_yojson_conv
    inferppx))
  (preprocessor_deps
   (glob_files ../../documentation/checkers/*.md)

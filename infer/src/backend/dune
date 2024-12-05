@@ -41,9 +41,7 @@
    -open
    Concurrency
    -open
-   Labs
-   -open
-   Ppx_yojson_conv_lib.Yojson_conv.Primitives))
+   Labs))
  (libraries
   core
   memtrace

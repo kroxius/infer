@@ -539,11 +539,10 @@ OPTIONS
            infer-reportdiff(1).
 
        --no-default-checkers
-           Deactivates: Default checkers: --static-constructor-stall-checker,
-           --fragment-retains-view, --inefficient-keyset-iterator,
-           --liveness, --parameter-not-null-checked, --pulse, --racerd,
-           --siof, --self-in-block, --starvation (Conversely:
-           --default-checkers)
+           Deactivates: Default checkers: --fragment-retains-view,
+           --inefficient-keyset-iterator, --liveness,
+           --parameter-not-null-checked, --pulse, --racerd, --siof,
+           --self-in-block, --starvation (Conversely: --default-checkers)
            See also infer-analyze(1).
 
        --dependencies
@@ -746,7 +745,6 @@ OPTIONS
              SKIP_FUNCTION (disabled by default),
              STACK_VARIABLE_ADDRESS_ESCAPE (enabled by default),
              STARVATION (enabled by default),
-             STATIC_CONSTRUCTOR_STALL (disabled by default),
              STATIC_INITIALIZATION_ORDER_FIASCO (enabled by default),
              STRICT_MODE_VIOLATION (enabled by default),
              STRONG_SELF_NOT_CHECKED (enabled by default),
@@ -1578,10 +1576,6 @@ OPTIONS
            Pulse. Accepted formats are method or namespace::method
            See also infer-analyze(1).
 
-       --pulse-model-unknown-pure +string
-           Regex of methods that should be modelled as unknown pure in Pulse
-           See also infer-analyze(1).
-
        --pulse-model-unreachable +string
            Methods to be modeled as unreachable.
            See also infer-analyze(1).
@@ -1644,12 +1638,6 @@ OPTIONS
        --pulse-only
            Activates: Enable pulse and disable all other checkers
            (Conversely: --no-pulse-only)
-           See also infer-analyze(1).
-
-       --pulse-over-approximate-reasoning
-           Activates: [EXPERIMENTAL] add over-approximate reasoning on top of
-           the under-approximate, disjunctive reasoning of Pulse.
-           (Conversely: --no-pulse-over-approximate-reasoning)
            See also infer-analyze(1).
 
        --pulse-recency-limit int
@@ -1875,15 +1863,6 @@ OPTIONS
            capture. Compatible with infer capture -- python3 file1.py
            file2.py but not with --pyc-file.
            See also infer-capture(1).
-
-       --python-globals { own-by-closures | own-by-module }
-           Specify the strategy to wire globals dictionnaire into each
-           function
-                - own-by-closures: each closure captured the global
-           dictionary
-           - own-by-module: each function is given the global dictionary as
-           argument (not referenced in the heap to avoid aliases)
-           See also infer-analyze(1).
 
        --qualified-cpp-name-block-list +string
            Skip analyzing the procedures under the qualified cpp type name.
@@ -2237,18 +2216,6 @@ OPTIONS
        --starvation-only
            Activates: Enable starvation and disable all other checkers
            (Conversely: --no-starvation-only)
-           See also infer-analyze(1).
-
-       --no-static-constructor-stall-checker
-           Deactivates: static-constructor-stall-checker checker: Detect if
-           dispatch_once is called from a static constructor. (Conversely:
-           --static-constructor-stall-checker)
-           See also infer-analyze(1).
-
-       --static-constructor-stall-checker-only
-           Activates: Enable static-constructor-stall-checker and disable all
-           other checkers (Conversely:
-           --no-static-constructor-stall-checker-only)
            See also infer-analyze(1).
 
        --stats-dir-current path

@@ -7,7 +7,6 @@
 
 open! IStd
 module L = Logging
-module IRAttributes = Attributes
 open PulseBasicInterface
 open PulseDomainInterface
 open PulseOperationResult.Import
@@ -497,8 +496,6 @@ module Syntax = struct
     ret () data astate
 
 
-  let get_static_type (addr, _) = AddressAttributes.get_static_type addr |> exec_pure_operation
-
   let tenv_resolve_field_info typ_name field_name : Struct.field_info option model_monad =
    fun ((_desc, {analysis_data= {tenv}}) as data) astate ->
     let info = Tenv.resolve_field_info tenv typ_name field_name in
@@ -524,7 +521,7 @@ module Syntax = struct
     let method_exists proc_name methods = List.mem ~equal:Procname.equal methods proc_name in
     let opt_info = Tenv.resolve_method ~method_exists tenv typ_name proc_name |> Result.ok in
     (* warning: we skipped missed capture informations here *)
-    let opt_resolved_proc_name = Option.map opt_info ~f:Tenv.MethodInfo.get_proc_name in
+    let opt_resolved_proc_name = Option.map opt_info ~f:Tenv.MethodInfo.get_procname in
     ret opt_resolved_proc_name data astate
 
 
@@ -606,24 +603,13 @@ module Syntax = struct
     |> lift_model
 
 
-  module HackBuilder = struct
-    let is_hack_builder tenv hacktypname builder_class_name =
-      (* TODO: deal with namespaces properly! *)
-      let builder_class_name = Typ.HackClass (HackClassName.make builder_class_name) in
-      PatternMatch.is_subtype tenv (HackClass hacktypname) builder_class_name
+  let is_hack_builder_in_config tenv hacktypname =
+    L.d_printfln "typname = %a" HackClassName.pp hacktypname ;
+    (* TODO: deal with namespaces properly! *)
+    List.exists Config.hack_builder_patterns ~f:(fun (builder_class_name, _) ->
+        let builder_class_name = Typ.HackClass (HackClassName.make builder_class_name) in
+        PatternMatch.is_subtype tenv (HackClass hacktypname) builder_class_name )
 
-
-    let is_hack_builder_in_config tenv hacktypname =
-      List.exists Config.hack_builder_patterns ~f:(fun Config.{class_name} ->
-          is_hack_builder tenv hacktypname class_name )
-
-
-    let is_hack_builder_immediately_non_discardable tenv hacktypname =
-      List.exists Config.hack_builder_patterns ~f:(fun Config.{immediately_non_discardable_class} ->
-          Option.exists immediately_non_discardable_class
-            ~f:(fun immediately_non_discardable_class ->
-              is_hack_builder tenv hacktypname immediately_non_discardable_class ) )
-  end
 
   let new_ type_name_exp =
     let* {analysis_data= {tenv}} = get_data in
@@ -634,19 +620,10 @@ module Syntax = struct
         let* () = and_dynamic_type_is new_obj typ in
         let* () =
           match Typ.name typ with
-          | Some (HackClass hacktypname) when HackBuilder.is_hack_builder_in_config tenv hacktypname
-            ->
+          | Some (HackClass hacktypname) when is_hack_builder_in_config tenv hacktypname ->
               let* () = allocation (Attribute.HackBuilderResource hacktypname) new_obj in
-              (* While it makes sense to set initial builder state to NonDiscardable we'd like
-                  to delay that until the first method call to avoid FPs caused by reporting
-                  on builders without any method calls unless builder is explicitly configured
-                 as non discardable *)
-              let builder_state =
-                if HackBuilder.is_hack_builder_immediately_non_discardable tenv hacktypname then
-                  Attribute.Builder.NonDiscardable
-                else Attribute.Builder.Discardable
-              in
-              AddressAttributes.set_hack_builder (fst new_obj) builder_state |> exec_command
+              AddressAttributes.set_hack_builder (fst new_obj) Attribute.Builder.NonDiscardable
+              |> exec_command
           | _ ->
               ret ()
         in
@@ -822,46 +799,13 @@ module Syntax = struct
     |> exec_partial_command
 
 
-  type closure_args =
-    | Regular of aval list
-    | FromAttributes of (ProcAttributes.t option -> aval list model_monad)
-
-  let mixed_type_name lang =
-    match (lang : Textual.Lang.t) with
-    | Hack ->
-        TextualSil.hack_mixed_type_name
-    | Python ->
-        TextualSil.python_mixed_type_name
-    | Java ->
-        L.die InternalError "DSL.call not supported on Java"
-
-
-  let call lang proc_name named_args =
-    let mixed_type_name = mixed_type_name lang in
-    let typ = Typ.mk_ptr (Typ.mk_struct mixed_type_name) in
-    let ret_id = Ident.create_none () in
-    let call_args =
-      List.map named_args ~f:(fun (str, arg) : ValueOrigin.t ProcnameDispatcher.Call.FuncArg.t ->
-          let pvar = Pvar.mk (Mangled.from_string str) proc_name in
-          let exp = Exp.Lvar pvar in
-          let arg_payload = ValueOrigin.OnStack {var= Var.of_pvar pvar; addr_hist= arg} in
-          {exp; typ; arg_payload} )
+  let apply_hack_closure (closure : aval) closure_args : aval model_monad =
+    let typ = Typ.mk_ptr (Typ.mk_struct TextualSil.hack_mixed_type_name) in
+    let args = closure :: closure_args in
+    let unresolved_pname =
+      Procname.make_hack ~class_name:(Some HackClassName.wildcard) ~function_name:"__invoke"
+        ~arity:(Some (List.length args))
     in
-    let* () = dispatch_call (ret_id, typ) proc_name call_args in
-    read (Exp.Var ret_id)
-
-
-  let python_call = call Python
-
-  let unknown_call ?(force_pure = false) lang skip_reason args : aval model_monad =
-    let mixed_type_name = mixed_type_name lang in
-    let typ = Typ.mk_ptr (Typ.mk_struct mixed_type_name) in
-    let actuals = List.map args ~f:(fun arg -> (arg, typ)) in
-    lift_model (Basic.unknown_call_without_formals ~force_pure skip_reason actuals)
-    |> lift_to_monad_and_get_result
-
-
-  let apply_closure lang (closure : aval) unresolved_pname closure_args : aval model_monad =
     let* opt_dynamic_type_data = get_dynamic_type ~ask_specialization:true closure in
     match opt_dynamic_type_data with
     | Some {Formula.typ= {Typ.desc= Tstruct type_name}} -> (
@@ -874,46 +818,24 @@ module Syntax = struct
             ret unknown_res
         | Some resolved_pname ->
             L.d_printfln "[ocaml model] Closure resolved to a call to %a" Procname.pp resolved_pname ;
-            let* closure_args =
-              match closure_args with
-              | Regular closure_args ->
-                  ret closure_args
-              | FromAttributes gen_closure_args ->
-                  gen_closure_args (IRAttributes.load resolved_pname)
+            let ret_id = Ident.create_none () in
+            let call_args =
+              List.mapi args ~f:(fun i arg : ValueOrigin.t ProcnameDispatcher.Call.FuncArg.t ->
+                  let pvar =
+                    Pvar.mk (Mangled.from_string (Printf.sprintf "CLOSURE_ARG%d" i)) resolved_pname
+                  in
+                  let exp = Exp.Lvar pvar in
+                  let arg_payload = ValueOrigin.OnStack {var= Var.of_pvar pvar; addr_hist= arg} in
+                  {exp; typ; arg_payload} )
             in
-            let args = closure :: closure_args in
-            let named_args =
-              List.mapi args ~f:(fun i arg -> (Printf.sprintf "CLOSURE_ARG%d" i, arg))
-            in
-            let* res = call lang resolved_pname named_args in
+            let* () = dispatch_call (ret_id, typ) resolved_pname call_args in
+            let* res = read (Exp.Var ret_id) in
             L.d_printfln "[ocaml model] Closure return value is %a." AbstractValue.pp (fst res) ;
             ret res )
     | _ ->
         L.d_printfln "[ocaml model] Closure dynamic type is unknown." ;
-        let unresolved_str = Format.asprintf "%a" Procname.pp unresolved_pname in
-        let* args =
-          match closure_args with
-          | Regular closure_args ->
-              ret closure_args
-          | FromAttributes gen_closure_args ->
-              gen_closure_args None
-        in
-        unknown_call lang unresolved_str args
-
-
-  let apply_hack_closure closure closure_args =
-    let unresolved_pname =
-      Procname.make_hack ~class_name:(Some HackClassName.wildcard) ~function_name:"__invoke"
-        ~arity:(Some (1 + List.length closure_args))
-    in
-    apply_closure Hack closure unresolved_pname (Regular closure_args)
-
-
-  let apply_python_closure closure gen_closure_args =
-    let unresolved_pname =
-      Procname.make_python ~class_name:(Some PythonClassName.wildcard) ~function_name:"call"
-    in
-    apply_closure Python closure unresolved_pname (FromAttributes gen_closure_args)
+        let* unknown_res = fresh () in
+        ret unknown_res
 
 
   module Basic = struct

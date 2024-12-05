@@ -6,7 +6,6 @@
  *)
 
 open! IStd
-module F = Format
 open PulseBasicInterface
 module BaseMemory = PulseBaseMemory
 module DecompilerExpr = PulseDecompilerExpr
@@ -40,26 +39,12 @@ type parameter_spec_t =
 
 include AbstractDomain.WithBottomTop
 
-val exec :
-     t
-  -> exec_instr:
-       ((ExecutionDomain.t * PathContext.t) * t -> (ExecutionDomain.t * PathContext.t) list * t)
-  -> t
-
-val pp_with_kind : Pp.print_kind -> F.formatter -> t -> unit
-
 type summary
 
-val make_summary : ProcAttributes.t -> Location.t -> t -> summary
+val make_summary : t -> summary
 
 module Summary : sig
-  type t = summary
-
-  val bottom : t
-
-  val pp : F.formatter -> t -> unit
-
-  val join : t -> t -> t
+  include AbstractDomain.WithBottom with type t = summary
 
   val get_transitive_info_if_not_top : t -> TransitiveInfo.t option
 

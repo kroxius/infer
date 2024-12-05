@@ -279,7 +279,7 @@ d = { 0x78: "abc", # 1-n decoding mapping
   in
   PyIR.test source ;
   [%expect
-    {|
+    {xxx|
     module dummy:
 
       function toplevel():
@@ -298,7 +298,7 @@ d = { 0x78: "abc", # 1-n decoding mapping
           n8 <- $Call(n5, n7, None)
           n9 <- $BuildConstKeyMap($BuildTuple(120, "abc", 1, 121), "abc", 120, None, "", None)
           TOPLEVEL[d] <- n9
-          return None |}]
+          return None |xxx}]
 
 
 let%expect_test _ =
@@ -433,7 +433,7 @@ x = o.f(0, *args1, *args2, **d1, **d2)
   in
   PyIR.test source ;
   [%expect
-    {|
+    {xxx|
     module dummy:
 
       function toplevel():
@@ -524,7 +524,8 @@ x = o.f(0, *args1, *args2, **d1, **d2)
           n70 <- $DictMerge($BuildMap(), n69, None)
           n71 <- $CallFunctionEx(n61, n66, $BuildMap(), None)
           TOPLEVEL[x] <- n71
-          return None |}]
+          return None
+|xxx}]
 
 
 let%expect_test _ =
@@ -548,6 +549,12 @@ def main(arg):
           return None
 
 
+      function dummy.main.f(x, y, z):
+        b0:
+          n0 <- $LoadDeref(0,"arg")
+          return n0
+
+
       function dummy.main(arg):
         b0:
           n0 <- $BuildConstKeyMap($BuildTuple("key"), None, None)
@@ -557,13 +564,7 @@ def main(arg):
           n4 <- $LoadClosure(0,"arg")
           n5 <- $MakeFunction["f", "dummy.main.f", $BuildTuple("ok", 0.), n0, $BuildTuple("x", n1, "y", n2, "z", n3), $BuildTuple(n4)]
           LOCAL[f] <- n5
-          return None
-
-
-      function dummy.main.f(x, y, z):
-        b0:
-          n0 <- $LoadDeref(0,"arg")
-          return n0 |}]
+          return None |}]
 
 
 let%expect_test _ =

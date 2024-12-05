@@ -89,7 +89,7 @@ end = struct
             class_name )
     in
     let regexp_match regexp name =
-      match Str.search_forward regexp name 0 with _ -> true | exception Stdlib.Not_found -> false
+      match Str.search_forward regexp name 0 with _ -> true | exception Caml.Not_found -> false
     in
     let match_class_name_regex regexp =
       Option.exists class_name ~f:(fun class_name ->
@@ -145,10 +145,10 @@ end = struct
     in
     let has_parents tenv type_name =
       let parents =
-        Tenv.fold_supers tenv type_name ~init:IString.Set.empty ~f:(fun parent _ acc ->
-            IString.Set.add (Typ.Name.name parent) acc )
+        Tenv.fold_supers tenv type_name ~init:String.Set.empty ~f:(fun parent _ acc ->
+            String.Set.add acc (Typ.Name.name parent) )
       in
-      fun classes -> List.exists classes ~f:(fun c -> IString.Set.mem c parents)
+      fun classes -> List.exists classes ~f:(String.Set.mem parents)
     in
     let check_extends tenv procname final_class_only initial_caller_class_extends =
       match Procname.get_class_type_name procname with

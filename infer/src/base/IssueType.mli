@@ -30,7 +30,6 @@ type category =
   | RuntimeException
   | SensitiveDataFlow
   | UngatedCode
-  | UserDefinedProperty
 [@@deriving compare, equal, enumerate]
 
 val string_of_severity : severity -> string
@@ -183,8 +182,6 @@ val data_flow_to_sink : t
 val dead_store : t
 
 val deadlock : t
-
-val static_constructor_stall : t
 
 val divide_by_zero : t
 

@@ -1279,27 +1279,6 @@ def f(l):
           return $BuildList()
 
 
-      function dummy.f(l):
-        b0:
-          n0 <- $MakeFunction["_$listcomp", "dummy.f._$listcomp", None, None, None, None]
-          n1 <- LOCAL[l]
-          n2 <- $GetIter(n1, None)
-          n3 <- $Call(n0, n2, None)
-          LOCAL[r] <- n3
-          n4 <- $MakeFunction["_$listcomp", "dummy.f._$listcomp", None, None, None, None]
-          n5 <- LOCAL[l]
-          n6 <- $GetIter(n5, None)
-          n7 <- $Call(n4, n6, None)
-          LOCAL[r0] <- n7
-          n8 <- GLOBAL[print]
-          n9 <- LOCAL[r]
-          n10 <- $Call(n8, n9, None)
-          n11 <- GLOBAL[print]
-          n12 <- LOCAL[r0]
-          n13 <- $Call(n11, n12, None)
-          return None
-
-
       function dummy.f._$listcomp(.0):
         b0:
           n0 <- LOCAL[.0]
@@ -1318,7 +1297,28 @@ def f(l):
           jmp b1
 
         b3:
-          return $BuildList() |}]
+          return $BuildList()
+
+
+      function dummy.f(l):
+        b0:
+          n0 <- $MakeFunction["_$listcomp", "dummy.f._$listcomp", None, None, None, None]
+          n1 <- LOCAL[l]
+          n2 <- $GetIter(n1, None)
+          n3 <- $Call(n0, n2, None)
+          LOCAL[r] <- n3
+          n4 <- $MakeFunction["_$listcomp", "dummy.f._$listcomp", None, None, None, None]
+          n5 <- LOCAL[l]
+          n6 <- $GetIter(n5, None)
+          n7 <- $Call(n4, n6, None)
+          LOCAL[r0] <- n7
+          n8 <- GLOBAL[print]
+          n9 <- LOCAL[r]
+          n10 <- $Call(n8, n9, None)
+          n11 <- GLOBAL[print]
+          n12 <- LOCAL[r0]
+          n13 <- $Call(n11, n12, None)
+          return None |}]
 
 
 let%expect_test _ =
@@ -1336,7 +1336,7 @@ def g(l):
   in
   PyIR.test source ;
   [%expect
-    {|
+    {xxx|
     module dummy:
 
       function toplevel():
@@ -1348,15 +1348,26 @@ def g(l):
           return None
 
 
-      function dummy.f(l):
+      function dummy.g._$dictcomp(.0):
         b0:
-          n0 <- $MakeFunction["_$setcomp", "dummy.f._$setcomp", None, None, None, None]
-          n1 <- LOCAL[l]
-          n2 <- $GetIter(n1, None)
-          n3 <- $Call(n0, n2, None)
-          LOCAL[r] <- n3
-          n4 <- LOCAL[r]
-          return n4
+          n0 <- LOCAL[.0]
+          jmp b1
+
+        b1:
+          n1 <- $NextIter(n0, None)
+          n2 <- $HasNextIter(n0, None)
+          if n2 then jmp b2 else jmp b3
+
+        b2:
+          LOCAL[num] <- n1
+          n3 <- LOCAL[num]
+          n4 <- LOCAL[num]
+          n5 <- $Binary.Power(n4, 2, None)
+          n6 <- $DictSetItem($BuildMap(), n3, n5, None)
+          jmp b1
+
+        b3:
+          return $BuildMap()
 
 
       function dummy.f._$setcomp(.0):
@@ -1380,6 +1391,17 @@ def g(l):
           return $BuildSet()
 
 
+      function dummy.f(l):
+        b0:
+          n0 <- $MakeFunction["_$setcomp", "dummy.f._$setcomp", None, None, None, None]
+          n1 <- LOCAL[l]
+          n2 <- $GetIter(n1, None)
+          n3 <- $Call(n0, n2, None)
+          LOCAL[r] <- n3
+          n4 <- LOCAL[r]
+          return n4
+
+
       function dummy.g(l):
         b0:
           n0 <- $MakeFunction["_$dictcomp", "dummy.g._$dictcomp", None, None, None, None]
@@ -1388,29 +1410,7 @@ def g(l):
           n3 <- $Call(n0, n2, None)
           LOCAL[squared_dict] <- n3
           n4 <- GLOBAL[r]
-          return n4
-
-
-      function dummy.g._$dictcomp(.0):
-        b0:
-          n0 <- LOCAL[.0]
-          jmp b1
-
-        b1:
-          n1 <- $NextIter(n0, None)
-          n2 <- $HasNextIter(n0, None)
-          if n2 then jmp b2 else jmp b3
-
-        b2:
-          LOCAL[num] <- n1
-          n3 <- LOCAL[num]
-          n4 <- LOCAL[num]
-          n5 <- $Binary.Power(n4, 2, None)
-          n6 <- $DictSetItem($BuildMap(), n3, n5, None)
-          jmp b1
-
-        b3:
-          return $BuildMap() |}]
+          return n4 |xxx}]
 
 
 let%expect_test _ =
@@ -1440,13 +1440,13 @@ async def g():
           return None
 
 
-      async function dummy.f():
+      function dummy.f():
         b0:
           $GenStartCoroutine()
           return true
 
 
-      async function dummy.g():
+      function dummy.g():
         b0:
           $GenStartCoroutine()
           n0 <- GLOBAL[f]
@@ -1616,18 +1616,18 @@ o.foo()
           return None
 
 
-      function dummy.C.foo(self):
-        b0:
-          n0 <- GLOBAL[print]
-          n1 <- $Call(n0, "I am foo", None)
-          return None
-
-
       function dummy._$lambda():
         b0:
           n0 <- GLOBAL[print]
           n1 <- $Call(n0, "I am not foo", None)
-          return n1 |}]
+          return n1
+
+
+      function dummy.C.foo(self):
+        b0:
+          n0 <- GLOBAL[print]
+          n1 <- $Call(n0, "I am foo", None)
+          return None |}]
 
 
 let%expect_test _ =
@@ -1769,7 +1769,7 @@ async def foo():
           return None
 
 
-      async function dummy.foo(i, f):
+      function dummy.foo(i, f):
         b0:
           $GenStartCoroutine()
           n0 <- GLOBAL[range]

@@ -9,7 +9,7 @@
 (** The Smallfoot Intermediate Language: Types *)
 
 open! IStd
-module Hashtbl = Stdlib.Hashtbl
+module Hashtbl = Caml.Hashtbl
 module L = Logging
 module F = Format
 

@@ -6,7 +6,7 @@
  *)
 
 open! IStd
-module Hashtbl = Stdlib.Hashtbl
+module Hashtbl = Caml.Hashtbl
 module F = Format
 module L = Logging
 
@@ -560,11 +560,7 @@ module Hack = struct
     let pp_arity verbosity fmt =
       match verbosity with
       | Verbose -> (
-        match t.arity with
-        | Some arity ->
-            F.fprintf fmt "#%d" arity
-        | None ->
-            F.pp_print_string fmt "#?" )
+        match t.arity with Some arity -> F.fprintf fmt "#%d" arity | None -> () )
       | Non_verbose | Simple | FullNameOnly | NameOnly ->
           ()
     in
@@ -587,10 +583,6 @@ module Hack = struct
     {class_name= Some static_class_name; function_name= "_86constinit"; arity= Some arity}
 
 
-  let is_invoke {function_name= name} = String.equal name "__invoke"
-
-  let is_late_binding {function_name= name} = String.equal name "lateBinding"
-
   let is_xinit {function_name= name} =
     String.equal name "_86pinit" || String.equal name "_86cinit" || String.equal name "_86constinit"
 
@@ -608,8 +600,6 @@ module Python = struct
   [@@deriving compare, equal, yojson_of, sexp, hash, normalize]
 
   let get_class_type_name {class_name} = Option.map class_name ~f:(fun cn -> Typ.PythonClass cn)
-
-  let get_class_name_as_a_string {class_name} = Option.map class_name ~f:PythonClassName.classname
 
   let pp fmt t =
     match t.class_name with
@@ -1001,22 +991,7 @@ let is_hack_construct = function
       false
 
 
-let is_hack_invoke = function Hack classname -> Hack.is_invoke classname | _ -> false
-
-let is_hack_late_binding = function Hack classname -> Hack.is_late_binding classname | _ -> false
-
 let is_hack_xinit = function Hack classname -> Hack.is_xinit classname | _ -> false
-
-let is_hack_internal procname =
-  if is_hack_xinit procname || is_hack_builtins procname || is_hack_construct procname then true
-  else
-    match procname with
-    (* Hack models are implemented as C functions *)
-    | C _ when Language.curr_language_is Hack ->
-        true
-    | _ ->
-        false
-
 
 let has_hack_classname = function Hack {class_name= Some _} -> true | _ -> false
 
@@ -1190,7 +1165,7 @@ let replace_regex regex tgt name =
   match Str.search_forward regex name 0 with
   | _ ->
       Str.global_replace regex tgt name
-  | exception Stdlib.Not_found ->
+  | exception Caml.Not_found ->
       name
 
 

@@ -11,7 +11,7 @@ module L = Logging
 module FileRenamings = struct
   type renaming = {current: string; previous: string}
 
-  module CurrentToPreviousMap = Stdlib.Map.Make (String)
+  module CurrentToPreviousMap = Caml.Map.Make (String)
 
   type t = string CurrentToPreviousMap.t [@@deriving compare, equal]
 
@@ -61,7 +61,7 @@ module FileRenamings = struct
   let from_json_file file : t = from_json (In_channel.read_all file)
 
   let find_previous (t : t) current =
-    try CurrentToPreviousMap.find current t with Stdlib.Not_found -> current
+    try CurrentToPreviousMap.find current t with Caml.Not_found -> current
 
 
   module VISIBLE_FOR_TESTING_DO_NOT_USE_DIRECTLY = struct
@@ -117,7 +117,7 @@ let relative_complements ~compare ~pred l1 l2 =
 
 let skip_duplicated_types_on_filenames renamings (diff : Differential.t) : Differential.t =
   let compare (issue1, previous_file1) (issue2, previous_file2) =
-    [%compare: Stdlib.Digest.t option * string * string]
+    [%compare: Caml.Digest.t option * string * string]
       (issue1.Jsonbug_t.node_key, issue1.Jsonbug_t.bug_type, previous_file1)
       (issue2.Jsonbug_t.node_key, issue2.Jsonbug_t.bug_type, previous_file2)
   in
@@ -178,16 +178,14 @@ let interesting_paths_filter (interesting_paths : SourceFile.t list option) =
                if (not (SourceFile.is_invalid p)) && SourceFile.is_under_project_root p then
                  Some (SourceFile.to_string p)
                else None )
-        |> IString.Set.of_list
+        |> String.Set.of_list
       in
       fun ~do_log report ->
         let stat = {all= List.length report; filtered_out= 0; filtered_out_header= 0} in
         let filtered_report =
           List.filter
             ~f:(fun issue ->
-              let is_interesting_path =
-                IString.Set.mem issue.Jsonbug_t.file interesting_paths_set
-              in
+              let is_interesting_path = String.Set.mem interesting_paths_set issue.Jsonbug_t.file in
               if do_log then incr_stat is_interesting_path issue.Jsonbug_t.file stat ;
               is_interesting_path )
             report

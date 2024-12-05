@@ -174,10 +174,8 @@ let capture ~prog ~args =
     "Running maven capture:@\n%s %s@." prog
     (String.concat ~sep:" " (List.map ~f:(Printf.sprintf "'%s'") capture_args)) ;
   (* let children infer processes know that they are spawned by Maven *)
-  let {pid; _} : Core_unix.Process_info.t =
-    Unix.create_process_env ~prog ~args ~env:Config.env_inside_maven ()
-  in
-  Unix.waitpid pid
+  Unix.fork_exec ~prog ~argv:(prog :: capture_args) ~env:Config.env_inside_maven ()
+  |> Unix.waitpid
   |> function
   | Ok () ->
       ()

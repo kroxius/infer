@@ -669,82 +669,25 @@ module InterDom = struct
         NonTop non_disj
 end
 
-module OverApproxDomain = struct
-  include AbstractDomain.BottomLifted (struct
-    type t = AbductiveDomain.t * PathContext.t
-
-    let pp fmt pair = Pp.pair ~fst:AbductiveDomain.pp ~snd:PathContext.pp fmt pair
-
-    let leq ~lhs:(astate_lhs, _) ~rhs:(astate_rhs, _) =
-      AbductiveDomain.leq ~lhs:astate_lhs ~rhs:astate_rhs
-
-
-    let join = PulseJoin.join
-
-    let widen ~prev ~next ~num_iters:_ = join prev next
-  end)
-
-  (* this is dodgy but we won't need this for long (famous last words...)  and it behaves the way we
-     want for now: when we reach top and start joining with a non-top, non-bottom abstract state,
-     then the result is that abstract state again and not top, which means we start "remembering"
-     (and joining) abstract states even after reaching top. We never really reach top anyway, top is
-     used by {!AbstractInterpreter} as a hack for when there are no executable disjuncts
-     (so... bottom!) *)
-  let top = bottom
-
-  (* *cough*... see [top] above *)
-  let is_top = is_bottom
-
-  let join lhs rhs = if Config.pulse_over_approximate_reasoning then join lhs rhs else bottom
-
-  let widen ~prev ~next ~num_iters =
-    if Config.pulse_over_approximate_reasoning then widen ~prev ~next ~num_iters else bottom
-
-
-  let pp_with_kind pp_kind fmt astate_path =
-    let pp fmt (astate, path) = PulsePp.pp pp_kind (Some path) fmt astate in
-    AbstractDomain.BottomLiftedUtils.pp pp fmt astate_path
-end
-
-type t =
-  { intra: IntraDom.t
-  ; inter: InterDom.t
-  ; has_dropped_disjuncts: AbstractDomain.BooleanOr.t
-  ; astate: OverApproxDomain.t }
+type t = {intra: IntraDom.t; inter: InterDom.t; has_dropped_disjuncts: AbstractDomain.BooleanOr.t}
 [@@deriving abstract_domain]
 
-let pp_with_kind pp_kind fmt
-    ({intra; inter; has_dropped_disjuncts; astate} [@warning "missing-record-field-pattern"]) =
-  F.fprintf fmt "@[over-approx: %a@\n%a,@ %a%s@]"
-    (OverApproxDomain.pp_with_kind pp_kind)
-    astate IntraDom.pp intra InterDom.pp inter
+let pp fmt ({intra; inter; has_dropped_disjuncts} [@warning "missing-record-field-pattern"]) =
+  F.fprintf fmt "@[%a,@ %a%s@]" IntraDom.pp intra InterDom.pp inter
     (if has_dropped_disjuncts then " (some disjuncts dropped)" else "")
 
 
-let pp fmt non_disj = pp_with_kind TEXT fmt non_disj
+let bottom = {intra= IntraDom.bottom; inter= InterDom.bottom; has_dropped_disjuncts= false}
 
-let bottom =
-  {intra= IntraDom.bottom; inter= InterDom.bottom; has_dropped_disjuncts= false; astate= Bottom}
-
-
-let is_bottom
-    ({intra; inter; has_dropped_disjuncts; astate} [@warning "missing-record-field-pattern"]) =
+let is_bottom ({intra; inter; has_dropped_disjuncts} [@warning "missing-record-field-pattern"]) =
   IntraDom.is_bottom intra && InterDom.is_bottom inter
   && AbstractDomain.BooleanOr.is_bottom has_dropped_disjuncts
-  && OverApproxDomain.is_bottom astate
 
 
-let top =
-  { intra= IntraDom.top
-  ; inter= InterDom.top
-  ; has_dropped_disjuncts= true
-  ; astate= OverApproxDomain.top }
+let top = {intra= IntraDom.top; inter= InterDom.top; has_dropped_disjuncts= true}
 
-
-let is_top ({intra; inter; has_dropped_disjuncts; astate} [@warning "missing-record-field-pattern"])
-    =
+let is_top ({intra; inter; has_dropped_disjuncts} [@warning "missing-record-field-pattern"]) =
   IntraDom.is_top intra && InterDom.is_top inter && has_dropped_disjuncts
-  && OverApproxDomain.is_top astate
 
 
 (* faster? *)
@@ -809,14 +752,12 @@ let remember_dropped_disjuncts disjuncts non_disj =
   let non_disj =
     if List.is_empty disjuncts then non_disj else {non_disj with has_dropped_disjuncts= true}
   in
-  List.fold disjuncts ~init:non_disj ~f:(fun non_disj (exec, path) ->
+  List.fold disjuncts ~init:non_disj ~f:(fun non_disj (exec, _) ->
       match exec with
       | ExecutionDomain.ContinueProgram astate ->
-          let inter =
-            InterDom.remember_dropped_elements astate.AbductiveDomain.transitive_info non_disj.inter
-          in
-          let astate = OverApproxDomain.join (NonBottom (astate, path)) non_disj.astate in
-          {non_disj with inter; astate}
+          map_inter
+            (InterDom.remember_dropped_elements astate.AbductiveDomain.transitive_info)
+            non_disj
       | _ ->
           non_disj )
 
@@ -832,50 +773,11 @@ let bind (execs, non_disj) ~f =
          (l @ acc, join joined_non_disj new_non_disj) )
 
 
-let exec non_disj ~exec_instr =
-  if Config.pulse_over_approximate_reasoning then
-    match non_disj.astate with
-    | Bottom ->
-        bottom
-    | NonBottom (astate, path) ->
-        (* move the abstract state from the non-disjunctive part into a single disjunct *)
-        let non_disj = {non_disj with astate= Bottom} in
-        let exec_states_paths, non_disj =
-          exec_instr ((ExecutionDomain.ContinueProgram astate, path), non_disj)
-        in
-        let astate =
-          List.fold exec_states_paths ~init:Bottom ~f:(fun astate_join (exec_state, path) ->
-              match (exec_state : ExecutionDomain.t) with
-              | ContinueProgram astate ->
-                  OverApproxDomain.join astate_join (NonBottom (astate, path))
-              | _ ->
-                  (* TODO: we may want separate over-approximate states for other kinds of
-                     disjuncts, especially for exceptional disjuncts *)
-                  astate_join )
-        in
-        if OverApproxDomain.is_bottom astate then bottom else {non_disj with astate}
-  else non_disj
+type summary = {transitive_info: InterDom.t; has_dropped_disjuncts: AbstractDomain.BooleanOr.t}
+[@@deriving abstract_domain]
 
-
-type summary =
-  { transitive_info: InterDom.t
-  ; has_dropped_disjuncts: AbstractDomain.BooleanOr.t
-  ; astate: AbductiveDomain.Summary.t AbstractDomain.Types.bottom_lifted }
-
-let make_summary proc_attributes location
-    ({inter= transitive_info; has_dropped_disjuncts; astate} : t) =
-  let astate =
-    match astate with
-    | Bottom ->
-        Bottom
-    | NonBottom (astate, _path) -> (
-      match AbductiveDomain.Summary.of_post proc_attributes location astate with
-      | Sat (Ok summary) ->
-          NonBottom summary
-      | _ ->
-          (* TODO(join): we should be more lenient here *) Bottom )
-  in
-  {transitive_info; has_dropped_disjuncts; astate}
+let make_summary ({inter= transitive_info; has_dropped_disjuncts} : t) =
+  {transitive_info; has_dropped_disjuncts}
 
 
 let apply_summary ~callee_pname ~call_loc ~skip_transitive_accesses (non_disj : t) summary =
@@ -892,32 +794,20 @@ let apply_summary ~callee_pname ~call_loc ~skip_transitive_accesses (non_disj : 
 
 
 module Summary = struct
-  type t = summary
+  type t = summary [@@deriving abstract_domain]
 
-  let pp fmt {transitive_info; has_dropped_disjuncts; astate} =
-    F.fprintf fmt "over-approx:@[%a@]@\n%a%s"
-      (AbstractDomain.BottomLiftedUtils.pp AbductiveDomain.Summary.pp)
-      astate InterDom.pp transitive_info
+  let pp fmt {transitive_info; has_dropped_disjuncts} =
+    F.fprintf fmt "%a%s" InterDom.pp transitive_info
       (if has_dropped_disjuncts then " (some disjuncts dropped)" else "")
 
 
   let bottom =
-    { transitive_info= InterDom.bottom
-    ; has_dropped_disjuncts= AbstractDomain.BooleanOr.bottom
-    ; astate= Bottom }
+    {transitive_info= InterDom.bottom; has_dropped_disjuncts= AbstractDomain.BooleanOr.bottom}
 
 
-  let join
-      { transitive_info= transitive_info1
-      ; has_dropped_disjuncts= has_dropped_disjuncts1
-      ; astate= astate1 }
-      { transitive_info= transitive_info2
-      ; has_dropped_disjuncts= has_dropped_disjuncts2
-      ; astate= astate2 } =
-    { transitive_info= InterDom.join transitive_info1 transitive_info2
-    ; has_dropped_disjuncts=
-        AbstractDomain.BooleanOr.join has_dropped_disjuncts1 has_dropped_disjuncts2
-    ; astate= AbstractDomain.BottomLiftedUtils.join PulseJoin.join_summaries astate1 astate2 }
+  let is_bottom summary =
+    InterDom.is_bottom summary.transitive_info
+    && AbstractDomain.BooleanOr.is_bottom summary.has_dropped_disjuncts
 
 
   let get_transitive_info_if_not_top {transitive_info} =

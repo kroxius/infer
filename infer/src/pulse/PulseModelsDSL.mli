@@ -80,12 +80,7 @@ module Syntax : sig
     -> ValueOrigin.t ProcnameDispatcher.Call.FuncArg.t list
     -> unit model_monad
 
-  val python_call : Procname.t -> (string * aval) list -> aval model_monad
-
   val apply_hack_closure : aval -> aval list -> aval model_monad
-
-  val apply_python_closure :
-    aval -> (ProcAttributes.t option -> aval list model_monad) -> aval model_monad
 
   val get_data : model_data model_monad
 
@@ -129,8 +124,6 @@ module Syntax : sig
 
   val add_static_type : Typ.name -> aval -> unit model_monad
 
-  val get_static_type : aval -> Typ.name option model_monad
-
   val deep_copy : ?depth_max:int -> aval -> aval model_monad
 
   val check_valid :
@@ -156,8 +149,6 @@ module Syntax : sig
 
   val load : aval -> aval model_monad
   (** read the Dereference access from the value *)
-
-  val and_dynamic_type_is : aval -> Typ.t -> unit model_monad
 
   val get_dynamic_type :
     ask_specialization:bool -> aval -> Formula.dynamic_type_data option model_monad

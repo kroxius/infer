@@ -27,9 +27,7 @@
    -open
    Absint
    -open
-   Topllib
-   -open
-   Ppx_yojson_conv_lib.Yojson_conv.Primitives))
+   Topllib))
  (libraries
   core
   iter

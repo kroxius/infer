@@ -16,7 +16,6 @@ type t =
   | ConfigImpactAnalysis
   | Cost
   | DisjunctiveDemo
-  | StaticConstructorStallChecker
   | FragmentRetainsView
   | Impurity
   | InefficientKeysetIterator

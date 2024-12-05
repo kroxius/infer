@@ -19,13 +19,13 @@ end
 
 module Make
     (X : Element)
-    (XSet : Stdlib.Set.S with type elt = X.t)
-    (XMap : Stdlib.Map.S with type key = X.t) : sig
+    (XSet : Caml.Set.S with type elt = X.t)
+    (XMap : Caml.Map.S with type key = X.t) : sig
   type t [@@deriving compare, equal]
 
   val pp : (F.formatter -> X.t -> unit) -> F.formatter -> t -> unit
 
-  type repr = private X.t [@@deriving compare, equal]
+  type repr = private X.t
 
   val empty : t
 
@@ -52,8 +52,6 @@ module Make
   (** [apply_subst subst uf] eliminate all variables in the domain of [subst] from [uf], keeping the
       smallest representative not in the domain of [subst] for each class. Classes without any such
       elements are kept intact. *)
-
-  val remove : X.t -> t -> t
 
   val filter : f:(X.t -> bool) -> t -> t
   (** only keep items satisfying [f] *)

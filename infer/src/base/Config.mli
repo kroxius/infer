@@ -35,8 +35,6 @@ type scheduler = File | Restart | SyntacticCallGraph [@@deriving equal]
 
 val string_of_scheduler : scheduler -> string
 
-type python_globals = OwnByClosures | OwnByModule [@@deriving equal]
-
 val build_system_of_exe_name : string -> build_system
 
 val string_of_build_system : build_system -> string
@@ -287,8 +285,6 @@ val compaction_minimum_interval_s : int
 
 val complete_capture_from : string option
 
-val compute_captured_context : bool
-
 val config_impact_config_field_patterns : Str.regexp list
 
 val config_impact_config_function_patterns : Str.regexp list
@@ -417,12 +413,7 @@ val global_tenv : bool
 
 val hackc_binary : string option
 
-type pulse_hack_builder_pattern =
-  {class_name: string; finalizers: string list; immediately_non_discardable_class: string option}
-
-type pulse_hack_builder_patterns = pulse_hack_builder_pattern list
-
-val hack_builder_patterns : pulse_hack_builder_patterns
+val hack_builder_patterns : (string * string list) list
 
 val hack_builtin_models : string
 
@@ -681,8 +672,6 @@ val pulse_model_transfer_ownership : string list
 
 val pulse_model_transfer_ownership_namespace : (string * string) list
 
-val pulse_model_unknown_pure : Str.regexp option
-
 val pulse_model_unreachable : string list
 
 val pulse_models_for_erlang : string list
@@ -694,8 +683,6 @@ val pulse_monitor_transitive_missed_captures : bool
 val pulse_nullsafe_report_npe : bool
 
 val pulse_nullsafe_report_npe_as_separate_issue_type : bool
-
-val pulse_over_approximate_reasoning : bool
 
 val pulse_prevent_non_disj_top : bool
 
@@ -755,8 +742,6 @@ val python_files_index : string option
 
 val python_skip_db : bool
 
-val python_globals : python_globals
-
 val qualified_cpp_name_block_list : string list
 
 val quiet : bool
@@ -765,7 +750,7 @@ val racerd_always_report_java : bool
 
 val racerd_guardedby : bool
 
-val racerd_ignore_classes : IString.Set.t
+val racerd_ignore_classes : String.Set.t
 
 val reactive_mode : bool
 

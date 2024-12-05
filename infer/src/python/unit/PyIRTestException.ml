@@ -442,7 +442,7 @@ async def async_with(filename):
           return None
 
 
-      async function dummy.async_with(filename):
+      function dummy.async_with(filename):
         b0:
           $GenStartCoroutine()
           n0 <- GLOBAL[open]
@@ -582,7 +582,7 @@ async def foo():
           return None
 
 
-      async function dummy.foo():
+      function dummy.foo():
         b0:
           $GenStartCoroutine()
           n0 <- GLOBAL[read1]
@@ -738,7 +738,7 @@ async def foo():
           return None
 
 
-      async function dummy.foo(res):
+      function dummy.foo(res):
         b0:
           $GenStartCoroutine()
           n0 <- GLOBAL[read1]

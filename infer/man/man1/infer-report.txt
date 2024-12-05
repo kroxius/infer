@@ -261,7 +261,6 @@ OPTIONS
              SKIP_FUNCTION (disabled by default),
              STACK_VARIABLE_ADDRESS_ESCAPE (enabled by default),
              STARVATION (enabled by default),
-             STATIC_CONSTRUCTOR_STALL (disabled by default),
              STATIC_INITIALIZATION_ORDER_FIASCO (enabled by default),
              STRICT_MODE_VIOLATION (enabled by default),
              STRONG_SELF_NOT_CHECKED (enabled by default),

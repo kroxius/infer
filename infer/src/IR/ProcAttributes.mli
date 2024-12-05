@@ -69,7 +69,6 @@ type t =
   ; is_cpp_copy_assignment: bool  (** true if the procedure is a copy assignment *)
   ; is_cpp_copy_ctor: bool  (** true if the procedure is a copy constructor *)
   ; is_cpp_move_ctor: bool  (** true if the procedure is a move constructor *)
-  ; is_static_ctor: bool  (** true if the procedure has the constructor attribute *)
   ; is_cpp_deleted: bool  (** true if the procedure is deleted *)
   ; is_cpp_implicit: bool
         (** returns false if the declaration exists in code and true if it was created implicitly by
@@ -77,8 +76,7 @@ type t =
   ; is_defined: bool  (** true if the procedure is defined, and not just declared *)
   ; is_java_synchronized_method: bool  (** the procedure is a Java synchronized method *)
   ; is_csharp_synchronized_method: bool  (** the procedure is a C# synchronized method *)
-  ; is_async: bool
-  ; is_closure_wrapper: bool  (** the wrapper we insert for each closure *)
+  ; is_hack_async: bool
   ; is_hack_wrapper: bool  (** a generated wrapper for LSB or default parameters *)
   ; block_as_arg_attributes: block_as_arg_attributes option
         (** Present if the procedure is an Objective-C block that has been passed to the given
@@ -91,9 +89,6 @@ type t =
   ; hack_variadic_position: int option
         (** the procedure is variadic and [Some n] means the variadic vector is composed of the
             arguments n, n+1, ..., length formals -1 *)
-  ; python_args: string list
-        (** each python function has a list of parameters that we store as a special ProcAttribute
-            while list formals will only contain dict parameters like Python locals *)
   ; sentinel_attr: (int * int) option  (** __attribute__((sentinel(int, int))) *)
   ; specialized_with_aliasing_info: specialized_with_aliasing_info option
         (** the procedure is a clone specialized with captured variables and paramaters sharing

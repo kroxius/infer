@@ -7,7 +7,7 @@
  *)
 
 open! IStd
-module Hashtbl = Stdlib.Hashtbl
+module Hashtbl = Caml.Hashtbl
 
 (** Map a file name to an array of string, one for each line in the file. *)
 type t = (SourceFile.t, string array) Hashtbl.t

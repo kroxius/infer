@@ -70,7 +70,7 @@ let compute_hash =
       , location_independent_proc_name
       , base_filename
       , location_independent_qualifier )
-    |> Stdlib.Digest.to_hex
+    |> Caml.Digest.to_hex
 
 
 let loc_trace_to_jsonbug_record trace_list =
@@ -239,12 +239,9 @@ module JsonIssuePrinter = MakeJsonListPrinter (struct
           match Utils.read_file filename with
           | Error _ ->
               L.user_error "Could not read file %s@\n" filename ;
-              IString.Map.empty
+              String.Map.empty
           | Ok lines ->
-              let suppressions, errors = Suppressions.parse_lines ~file:filename lines in
-              List.iter errors ~f:(fun (Suppressions.UserError error) ->
-                  L.user_error "%s" (error ()) ) ;
-              suppressions )
+              Suppressions.parse_lines ~file:filename lines )
     in
     suppressions_cache := SourceFile.Map.add source_file suppressions !suppressions_cache ;
     Suppressions.is_suppressed ~suppressions ~issue_type ~line

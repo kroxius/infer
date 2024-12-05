@@ -9,7 +9,7 @@
 (** The Smallfoot Intermediate Language: Expressions *)
 
 open! IStd
-module Hashtbl = Stdlib.Hashtbl
+module Hashtbl = Caml.Hashtbl
 module F = Format
 module L = Logging
 
@@ -53,11 +53,11 @@ and t =
   | Sizeof of sizeof_data
 [@@deriving compare, equal, hash, normalize]
 
-module Set = Stdlib.Set.Make (struct
+module Set = Caml.Set.Make (struct
   type nonrec t = t [@@deriving compare]
 end)
 
-module Map = Stdlib.Map.Make (struct
+module Map = Caml.Map.Make (struct
   type nonrec t = t [@@deriving compare]
 end)
 

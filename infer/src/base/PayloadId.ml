@@ -15,7 +15,6 @@ type t =
   | ConfigImpactAnalysis
   | Cost
   | DisjunctiveDemo
-  | StaticConstructorStallChecker
   | LabResourceLeaks
   | LithoRequiredProps
   | Pulse
@@ -46,8 +45,6 @@ let to_checker payload_id : Checker.t =
       Cost
   | DisjunctiveDemo ->
       DisjunctiveDemo
-  | StaticConstructorStallChecker ->
-      StaticConstructorStallChecker
   | LabResourceLeaks ->
       ResourceLeakLabExercise
   | LithoRequiredProps ->
