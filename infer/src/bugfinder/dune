@@ -1,8 +1,8 @@
 ; Author: Lukáš Trecha <xtrechl00@stud.fit.vutbr.cz>
 
 (library
- (name BugFinderSL)
- (public_name infer.BugFinderSL)
+ (name BugFinder)
+ (public_name infer.BugFinder)
  (flags
   (:standard
    -open
