@@ -36,6 +36,7 @@ type t =
   | SelfInBlock
   | Starvation
   | Topl
+  | BugFinder
 [@@deriving equal, enumerate]
 
 (** per-language support for each checker *)

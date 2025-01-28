@@ -26,7 +26,8 @@ type t =
   ; siof: SiofDomain.Summary.t Lazy.t option
   ; lineage: Lineage.Summary.t Lazy.t option
   ; lineage_shape: LineageShape.Summary.t Lazy.t option
-  ; starvation: StarvationDomain.summary Lazy.t option }
+  ; starvation: StarvationDomain.summary Lazy.t option
+  ; bugfinder: BugFinderDomain.summary Lazy.t option }
 [@@deriving fields]
 
 let yojson_of_t {pulse} =
@@ -74,6 +75,7 @@ let all_fields =
     ~lineage:(fun f -> mk f Lineage Lineage.Summary.pp)
     ~lineage_shape:(fun f -> mk f LineageShape LineageShape.Summary.pp)
     ~starvation:(fun f -> mk f Starvation StarvationDomain.pp_summary)
+    ~bugfinder:(fun f -> mk f BugFinder BugFinderDomain.pp)
   (* sorted to help serialization, see {!SQLite.serialize} below *)
   |> List.sort ~compare:(fun (F {payload_id= payload_id1}) (F {payload_id= payload_id2}) ->
          Int.compare
@@ -117,7 +119,8 @@ let empty =
   ; siof= None
   ; lineage= None
   ; lineage_shape= None
-  ; starvation= None }
+  ; starvation= None
+  ; bugfinder= None }
 
 
 module PayloadIdToField =
@@ -211,6 +214,7 @@ module SQLite = struct
       ~lab_resource_leaks:data_of_sqlite_column ~scope_leakage:data_of_sqlite_column
       ~siof:data_of_sqlite_column ~lineage:data_of_sqlite_column
       ~lineage_shape:data_of_sqlite_column ~starvation:data_of_sqlite_column
+      ~bugfinder:data_of_sqlite_column
 
 
   let eager_load stmt ~first_column = (make_eager first_column |> fst) stmt
@@ -266,5 +270,6 @@ module SQLite = struct
     ; siof= load table ~proc_uid SIOF
     ; lineage= load table ~proc_uid Lineage
     ; lineage_shape= load table ~proc_uid LineageShape
-    ; starvation= load table ~proc_uid Starvation }
+    ; starvation= load table ~proc_uid Starvation
+    ; bugfinder= load table ~proc_uid BugFinder }
 end

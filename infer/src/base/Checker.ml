@@ -37,6 +37,7 @@ type t =
   | SelfInBlock
   | Starvation
   | Topl
+  | BugFinder
 [@@deriving compare, equal, enumerate]
 
 type support = NoSupport | ExperimentalSupport | Support
@@ -385,6 +386,14 @@ let config_unsafe checker =
           "This checker validates that all SIL instructions in all procedure bodies conform to a \
            (front-end specific) subset of SIL."
       ; cli_flags= Some {deprecated= []; show_in_help= true}
+      ; enabled_by_default= false
+      ; activates= [] }
+  | BugFinder ->
+      { id= "bugfinder"
+      ; kind= UserFacing {title= "BugFinder"; markdown_body= ""}
+      ; support= mk_support_func ~clang:Support ()
+      ; short_documentation= ""
+      ; cli_flags= Some {deprecated= []; show_in_help= false}
       ; enabled_by_default= false
       ; activates= [] }
 

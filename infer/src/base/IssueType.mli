@@ -400,4 +400,6 @@ val unreachable_cost_call : kind:CostKind.t -> t
 
 val lineage_flow : t
 
+val bugfinder_error : t
+
 module Map : PrettyPrintable.PPMap with type key = t

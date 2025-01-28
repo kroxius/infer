@@ -229,7 +229,8 @@ let all_checkers =
         (let java_validator = intraprocedural (SilValidation.checker Language.Java) in
          let clang_validator = intraprocedural (SilValidation.checker Language.Clang) in
          let erlang_validator = intraprocedural (SilValidation.checker Language.Erlang) in
-         [(java_validator, Java); (clang_validator, Clang); (erlang_validator, Erlang)] ) } ]
+         [(java_validator, Java); (clang_validator, Clang); (erlang_validator, Erlang)] ) }
+  ; { checker= BugFinder; callbacks= [(interprocedural Payloads.Fields.bugfinder BugFinder.checker, Clang)]}]
 
 
 let get_active_checkers () =
