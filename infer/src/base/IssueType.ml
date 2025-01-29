@@ -1110,7 +1110,7 @@ let wrong_argument_number =
 let unreachable_cost_call ~kind = register_cost ~enabled:false ~kind "%s_UNREACHABLE_AT_EXIT"
 
 let bugfinder_error =
-  register ~category:MemoryError ~id:"BUGFINDER_ERROR" Error BugFinder
+  register ~category:MemoryError ~id:"BUGFINDER_ERROR" ~enabled:true Error BugFinder
     ~user_documentation:"BugFinder Error"
 
 (* register enabled cost issues *)

@@ -10,91 +10,41 @@
 
 open! IStd
 module F = Format
-module L = Logging
+module Domain = BugFinderDomain
 
 module TransferFunctions (CFG : ProcCfg.S) = struct
   module CFG = CFG
-  module Domain = BugFinderDomain
+  module Domain = Domain
 
-  type analysis_data = BugFinderDomain.t InterproceduralAnalysis.t
+  type analysis_data = Domain.t InterproceduralAnalysis.t
 
-  let is_closeable_typename tenv typename =
-    let is_closable_interface typename _ =
-      match Typ.Name.name typename with
-      | "java.io.AutoCloseable" | "java.io.Closeable" ->
-          true
-      | _ ->
-          false
-    in
-    PatternMatch.supertype_exists tenv is_closable_interface typename
-
-
-  let is_closeable_procname tenv procname =
-    match procname with
-    | Procname.Java java_procname ->
-        is_closeable_typename tenv (Procname.Java.get_class_type_name java_procname)
-    | _ ->
-        false
-
-
-  let acquires_resource tenv procname =
-    (* We assume all constructors of a subclass of [Closeable] acquire a resource *)
-    Procname.is_constructor procname && is_closeable_procname tenv procname
-
-
-  let releases_resource tenv procname =
-    (* We assume the [close] method of a [Closeable] releases all of its resources *)
-    String.equal "close" (Procname.get_method procname) && is_closeable_procname tenv procname
-
-
-  (** Take an abstract state and instruction, produce a new abstract state *)
   let exec_instr (astate : BugFinderDomain.t)
-      {InterproceduralAnalysis.proc_desc= _; tenv; analyze_dependency= _; _} _ _ (instr : Sil.instr)
+      {InterproceduralAnalysis.proc_desc= _; tenv=_; analyze_dependency; _} _ _ (instr : Sil.instr)
       =
     match instr with
-    (* function call of the form [_return = callee_proc_name(..._actuals)] *)
-    | Call (_return, Const (Cfun callee_proc_name), _actuals, _loc, _) ->
-        if acquires_resource tenv callee_proc_name then BugFinderDomain.acquire_resource astate
-        else if releases_resource tenv callee_proc_name then
-          BugFinderDomain.release_resource astate
-        else astate
-    (* load of an address [_lhs:_lhs_typ = *_rhs] *)
-    | Load {id= _lhs; e= _rhs; typ= _lhs_typ; loc= _loc} ->
-        astate
-    (* store at an address [*_lhs = _rhs:_rhs_typ] *)
-    | Store {e1= _lhs; e2= _rhs; typ= _rhs_typ; loc= _loc} ->
-        astate
-    (* a conditional [assume(assume_exp)] blocks if [assume_exp] evaluates to false *)
-    | Prune (_assume_exp, _loc, _, _) ->
-        astate
-    (* Call to a function/method not statically known, eg a function pointer. This should never
-       happen in Java; fail if it does. *)
-    | Call (_return, call_exp, _actuals, loc, _) ->
-        L.die InternalError "Unexpected indirect call %a at %a" Exp.pp call_exp Location.pp loc
-    | Metadata _ ->
-        astate
+    | Call (_return, Const (Cfun callee_proc_name), _actuals, _loc, _) -> (
+        if (phys_equal (String.compare (Procname.to_string callee_proc_name) "malloc") 0) then BugFinderDomain.mem_malloc astate
+        else if (phys_equal (String.compare (Procname.to_string callee_proc_name) "free") 0) then BugFinderDomain.mem_free astate
+        else match analyze_dependency callee_proc_name with
+        | Ok callee_summary -> BugFinderDomain.apply_summary ~summary:callee_summary astate
+        | Error _ -> astate
+    )
+    | _ -> astate
 
-
-  let pp_session_name _node fmt = F.pp_print_string fmt "resource leaks lab"
+  let pp_session_name _node fmt = F.pp_print_string fmt "bug finder test"
 end
 
-(** 5(a) Type of CFG to analyze: [Exceptional] to follow exceptional control-flow edges, [Normal] to
-    ignore them *)
 module CFG = ProcCfg.Normal
-
-(* Create an intraprocedural abstract interpreter from the transfer functions we defined *)
 module Analyzer = AbstractInterpreter.MakeRPO (TransferFunctions (CFG))
 
-(** Report an error when we have acquired more resources than we have released *)
 let report_if_leak {InterproceduralAnalysis.proc_desc; err_log; _} post =
   if BugFinderDomain.has_leak post then
     let last_loc = Procdesc.Node.get_loc (Procdesc.get_exit_node proc_desc) in
-    let message = F.asprintf "Leaked %a resource(s)" BugFinderDomain.pp post in
+    let message = F.asprintf "%a memory leaks" BugFinderDomain.pp post in
     Reporting.log_issue proc_desc err_log ~loc:last_loc BugFinder
-      IssueType.lab_resource_leak message
+      IssueType.bugfinder_error message
 
-
-(** Main function into the checker; registered in {!RegisterCheckers} *)
+(* TODO - FormalMap ? *)
 let checker ({InterproceduralAnalysis.proc_desc} as analysis_data) =
   let result = Analyzer.compute_post analysis_data ~initial:BugFinderDomain.initial proc_desc in
   Option.iter result ~f:(fun post -> report_if_leak analysis_data post) ;

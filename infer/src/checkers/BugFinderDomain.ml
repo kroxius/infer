@@ -11,23 +11,68 @@
 open! IStd
 module F = Format
 
-type t = int
+module FiniteBounds = struct
+  type t = int
 
-let leq ~lhs ~rhs = lhs <= rhs
+  let leq ~lhs ~rhs = lhs <= rhs
 
-let join _a _b = assert false
+  let join a b = max a b
 
-let widen ~prev:_ ~next:_ ~num_iters:_ = assert false
+  let widen ~prev ~next ~num_iters:_ = join prev next
 
-let pp fmt astate = F.fprintf fmt "%d" astate
+  let pp fmt astate = F.fprintf fmt "%d" astate
+end
 
-let initial = 0
+module BoundsWithTop = struct
+  open AbstractDomain.Types
+  include AbstractDomain.TopLifted (FiniteBounds)
 
-let acquire_resource held = held + 1
+  let widening_threshold = 5
 
-let release_resource held = held - 1
+  let widen ~prev ~next ~num_iters =
+    match (prev, next) with
+    | Top, _ | _, Top -> Top
+    | NonTop prev, NonTop next ->
+      if num_iters < widening_threshold
+        then NonTop (FiniteBounds.join prev next)
+        else Top
+end
 
-let has_leak held = held > 0
+module AllocatesMemory = AbstractDomain.BooleanOr
+include AbstractDomain.Pair (BoundsWithTop) (AllocatesMemory)
+open AbstractDomain.Types
+
+let initial = (NonTop 0, false)
+
+let mem_malloc astate =
+  match astate with
+  | (Top, bor) -> (Top, bor)
+  | (NonTop cnt, bor) -> (NonTop (cnt+1), bor)
+
+let mem_free astate =
+  match astate with
+  | (Top, bor) -> (Top, bor)
+  | (NonTop cnt, bor) -> (NonTop (cnt-1), bor)
+
+let has_leak astate =
+  match astate with
+  | (Top, _) -> true
+  | (NonTop cnt, _) -> if cnt > 0 then true else false
+
+let apply_summary ~summary:(summary_count, summary_allocates) (current_count, current_allocates) =
+  let new_count =
+    match current_count with
+    | Top -> Top
+    | NonTop current_count ->
+      let return_count = if summary_allocates then 1 else 0 in
+      let summary_count =
+        match summary_count with
+        | Top -> 0
+        | NonTop x -> x
+      in NonTop (current_count + return_count + summary_count)
+  in (new_count, current_allocates)
+
+let record_allocates (cnt, _) = (cnt, true)   
 
 type summary = t
  
